@@ -1,0 +1,13 @@
+#!/bin/bash
+set -ex
+
+# Version control tags
+# We append BUILD_DATE to the image tag.
+
+BUILD_DATE=`date -u +%Y.%m.%d`
+
+for target in druidoo druidoo-e; do
+	TAG="$DOCKER_REPO:$DOCKER_TAG.$target"
+	docker tag "$TAG" "$TAG.$BUILD_DATE"
+    docker push "$TAG.$BUILD_DATE"
+done

@@ -1,0 +1,109 @@
+# OCA
+web:
+    defaults:
+        depth: 1
+    remotes:
+        origin: https://github.com/OCA/web.git
+    merges:
+        - origin $ODOO_VERSION
+    target: origin $ODOO_VERSION
+
+website:
+    defaults:
+        depth: 1
+    remotes:
+        origin: https://github.com/OCA/website.git
+    merges:
+        - origin $ODOO_VERSION
+    target: origin $ODOO_VERSION
+
+server-tools:
+    defaults:
+        depth: 1
+    remotes:
+        origin: https://github.com/OCA/server-tools.git
+    merges:
+        - origin $ODOO_VERSION
+    target: origin $ODOO_VERSION
+
+server-ux:
+    defaults:
+        depth: 1
+    remotes:
+        origin: https://github.com/OCA/server-ux.git
+    merges:
+        - origin $ODOO_VERSION
+    target: origin $ODOO_VERSION
+
+partner-contact:
+    defaults:
+        depth: 1
+    remotes:
+        origin: https://github.com/OCA/partner-contact.git
+    merges:
+        - origin $ODOO_VERSION
+    target: origin $ODOO_VERSION
+
+server-tools:
+    defaults:
+        depth: 1
+    remotes:
+        origin: https://github.com/OCA/server-tools.git
+    merges:
+        - origin $ODOO_VERSION
+    target: origin $ODOO_VERSION
+
+sale-workflow:
+    defaults:
+        depth: 1
+    remotes:
+        origin: https://github.com/OCA/sale-workflow.git
+    merges:
+        - origin $ODOO_VERSION
+    target: origin $ODOO_VERSION
+
+purchase-workflow:
+    defaults:
+        depth: 1
+    remotes:
+        origin: https://github.com/OCA/purchase-workflow.git
+    merges:
+        - origin $ODOO_VERSION
+    target: origin $ODOO_VERSION
+
+reporting-engine:
+    defaults:
+        depth: 1
+    remotes:
+        origin: https://github.com/OCA/reporting-engine.git
+    merges:
+        - origin $ODOO_VERSION
+    target: origin $ODOO_VERSION
+
+pos:
+    defaults:
+        depth: 1
+    remotes:
+        origin: https://github.com/OCA/pos.git
+    merges:
+        - origin $ODOO_VERSION
+    target: origin $ODOO_VERSION
+
+# Ingadhoc
+ingadhoc-odoo-saas:
+    defaults:
+        depth: 1
+    remotes:
+        origin: https://$GITHUB_USER:$GITHUB_TOKEN@github.com/ingadhoc/odoo-saas.git
+    merges:
+        - origin $ODOO_VERSION
+    target: origin $ODOO_VERSION
+
+ingadhoc-odoo-support:
+    defaults:
+        depth: 1
+    remotes:
+        origin: https://github.com/ingadhoc/odoo-support.git
+    merges:
+        - origin $ODOO_VERSION
+    target: origin $ODOO_VERSION
