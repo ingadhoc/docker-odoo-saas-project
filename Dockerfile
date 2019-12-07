@@ -1,4 +1,4 @@
-ARG IMAGE=druidoo/odoo
+ARG IMAGE=adhoc/odoo
 ARG BASETAG=odoo-e
 ARG ODOO_VERSION=12.0
 
