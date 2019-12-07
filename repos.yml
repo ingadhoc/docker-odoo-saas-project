@@ -88,22 +88,3 @@ pos:
     merges:
         - origin $ODOO_VERSION
     target: origin $ODOO_VERSION
-
-# Ingadhoc
-ingadhoc-odoo-saas:
-    defaults:
-        depth: 1
-    remotes:
-        origin: https://$GITHUB_USER:$GITHUB_TOKEN@github.com/ingadhoc/odoo-saas.git
-    merges:
-        - origin $ODOO_VERSION
-    target: origin $ODOO_VERSION
-
-ingadhoc-odoo-support:
-    defaults:
-        depth: 1
-    remotes:
-        origin: https://github.com/ingadhoc/odoo-support.git
-    merges:
-        - origin $ODOO_VERSION
-    target: origin $ODOO_VERSION
