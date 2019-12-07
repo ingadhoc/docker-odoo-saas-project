@@ -1,4 +1,4 @@
-ARG IMAGE=adhoc/odoo
+ARG IMAGE=adhoc/oca
 ARG BASETAG=odoo-e
 ARG ODOO_VERSION=12.0
 
@@ -53,3 +53,4 @@ COPY conf.d/* $RESOURCES/conf.d/
 # Aggregate new repositories of this image
 COPY repos.yml $RESOURCES/
 RUN autoaggregate --config "$RESOURCES/repos.yml" --install --output $SOURCES/repositories
+RUN autoaggregate --config "$RESOURCES/repos-e.yml" --install --output $SOURCES/repositories
