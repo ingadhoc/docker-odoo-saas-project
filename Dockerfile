@@ -18,14 +18,6 @@ ENV FILESTORE_OPERATIONS_THREADS=3 \
     REDIS_DBINDEX=1 \
     REDIS_PASS=False
 
-# Compatibility with adhoc directories
-# TODO: move to adhoc custom image
-RUN mkdir -p /opt/odoo && \
-    ln -s $SOURCES /opt/odoo/default && \
-    ln -s $CUSTOM /opt/odoo/custom && \
-    ln -s $DATA_DIR /opt/odoo/odoo_data && \
-    chown -R odoo.odoo /opt/odoo && sync
-
 # Add other dependencies
 USER root
 RUN apt-get update \
