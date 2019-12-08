@@ -1,4 +1,4 @@
-ARG IMAGE=adhoc/oca
+ARG IMAGE=adhoc/odoo-oca
 ARG BASETAG=odoo-e
 ARG ODOO_VERSION=12.0
 
