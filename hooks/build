@@ -23,7 +23,6 @@ for target in adhoc adhoc-e; do
         --build-arg GITHUB_USER="$GITHUB_USER" \
         --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
         --tag "$DOCKER_REPO:$BASE_IMAGE_TAG" \
-        --target $target \
         .
 
 done
