@@ -2,13 +2,26 @@
 set -ex
 
 for target in adhoc adhoc-e; do
+
+    # Don't build base if BUILD_TAG_BASE != true
+    if [ "$target" == "adhoc-e" ] && [ -z "$BUILD_TAG_ENTERPRISE" ]; then
+        continue
+    fi
+
+    BASE_IMAGE_TAG="$DOCKER_TAG"
+    if [ "$target" == "adhoc-e" ]; then
+        BASE_IMAGE_TAG="${BASE_IMAGE_TAG}-enterprise"
+    fi
+
     docker image build \
         --build-arg VCS_REF="$GIT_SHA1" \
         --build-arg BUILD_DATE="$(date --rfc-3339 ns)" \
         --build-arg ODOO_VERSION="$DOCKER_TAG" \
-        --build-arg BASETAG=${target//adhoc/odoo} \
+        --build-arg BASE_IMAGE_TAG="$BASE_IMAGE_TAG" \
         --build-arg GITHUB_USER="$GITHUB_USER" \
         --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
-        --tag "$DOCKER_REPO:$DOCKER_TAG.$target" \
+        --tag "$DOCKER_REPO:$BASE_IMAGE_TAG" \
+        --target $target \
         .
+
 done

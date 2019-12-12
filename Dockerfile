@@ -1,8 +1,7 @@
-ARG IMAGE=adhoc/odoo-oca
-ARG BASETAG=odoo-e
-ARG ODOO_VERSION=12.0
+ARG BASE_IMAGE_REPO=adhoc/odoo-oca
+ARG BASE_IMAGE_TAG=12.0
 
-FROM $IMAGE:$ODOO_VERSION.$BASETAG
+FROM $BASE_IMAGE_REPO:$BASE_IMAGE_TAG AS adhoc
 
 ARG GITHUB_USER
 ARG GITHUB_TOKEN
@@ -43,14 +42,19 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 USER odoo
 
-# Add patched server.py. Hacked to avoid creating a new database if it doesn't exist, when sending db_name
-ADD server.py /home/odoo/.local/lib/python3.5/site-packages/odoo/cli/
-
 # Add new entrypoints and configs
 COPY entrypoint.d/* $RESOURCES/entrypoint.d/
 COPY conf.d/* $RESOURCES/conf.d/
+COPY resources/$ODOO_VERSION/* $RESOURCES/
+
+# Run custom build hook, if available
+RUN $RESOURCES/build
 
 # Aggregate new repositories of this image
-COPY repos.yml $RESOURCES/
 RUN autoaggregate --config "$RESOURCES/repos.yml" --install --output $SOURCES/repositories
-RUN autoaggregate --config "$RESOURCES/repos-e.yml" --install --output $SOURCES/repositories
+
+# get repos from odoo-version-group and odoo-version
+RUN wget -O $RESOURCES/odoo_version_group_repos.yml wget https://www.adhoc.com.ar/odoo_version/$ODOO_VERSION_ID/repos.yml?token=$REPOS_YML_TOKEN
+RUN wget -O $RESOURCES/odoo_version_repos.yml wget https://www.adhoc.com.ar/odoo_version/$ODOO_VERSION_ID/`date -u +%Y.%m.%d`/repos.yml?token=$REPOS_YML_TOKEN
+RUN autoaggregate --config "$RESOURCES/odoo_version_group_repos.yml" --install --output $SOURCES/repositories
+RUN autoaggregate --config "$RESOURCES/odoo_version_repos.yml" --install --output $SOURCES/repositories
