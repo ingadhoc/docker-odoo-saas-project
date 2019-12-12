@@ -17,7 +17,9 @@ for target in adhoc adhoc-e; do
         --build-arg VCS_REF="$GIT_SHA1" \
         --build-arg BUILD_DATE="$(date --rfc-3339 ns)" \
         --build-arg ODOO_VERSION="$DOCKER_TAG" \
-        --build-arg BASE_IMAGE_TAG="$BASE_IMAGE_TAG" \
+        --build-arg REPOS_YML_TOKEN="$REPOS_YML_TOKEN" \
+        --build-arg ODOO_VERSION_ID="$ODOO_VERSION_ID" \
+        --build-arg GITHUB_USER="$GITHUB_USER" \
         --build-arg GITHUB_USER="$GITHUB_USER" \
         --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
         --tag "$DOCKER_REPO:$BASE_IMAGE_TAG" \

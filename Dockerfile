@@ -5,8 +5,12 @@ FROM $BASE_IMAGE_REPO:$BASE_IMAGE_TAG AS adhoc
 
 ARG GITHUB_USER
 ARG GITHUB_TOKEN
+ARG REPOS_YML_TOKEN
+ARG ODOO_VERSION_ID
 ENV GITHUB_USER="$GITHUB_USER"
 ENV GITHUB_TOKEN="$GITHUB_TOKEN"
+ENV REPOS_YML_TOKEN="$REPOS_YML_TOKEN"
+ENV ODOO_VERSION_ID="$ODOO_VERSION_ID"
 
 # Default env values used by config generator
 ENV FILESTORE_OPERATIONS_THREADS=3 \
@@ -54,7 +58,7 @@ RUN $RESOURCES/build
 RUN autoaggregate --config "$RESOURCES/repos.yml" --install --output $SOURCES/repositories
 
 # get repos from odoo-version-group and odoo-version
-RUN wget -O $RESOURCES/odoo_version_group_repos.yml wget https://www.adhoc.com.ar/odoo_version/$ODOO_VERSION_ID/repos.yml?token=$REPOS_YML_TOKEN
-RUN wget -O $RESOURCES/odoo_version_repos.yml wget https://www.adhoc.com.ar/odoo_version/$ODOO_VERSION_ID/`date -u +%Y.%m.%d`/repos.yml?token=$REPOS_YML_TOKEN
+RUN wget -O $RESOURCES/odoo_version_group_repos.yml https://www.adhoc.com.ar/odoo_version/$ODOO_VERSION_ID/repos.yml?token=$REPOS_YML_TOKEN
+RUN wget -O $RESOURCES/odoo_version_repos.yml https://www.adhoc.com.ar/odoo_version/$ODOO_VERSION_ID/`date -u +%Y.%m.%d`/repos.yml?token=$REPOS_YML_TOKEN
 RUN autoaggregate --config "$RESOURCES/odoo_version_group_repos.yml" --install --output $SOURCES/repositories
 RUN autoaggregate --config "$RESOURCES/odoo_version_repos.yml" --install --output $SOURCES/repositories
