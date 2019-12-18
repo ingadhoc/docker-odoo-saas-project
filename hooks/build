@@ -1,28 +1,33 @@
 #!/bin/bash
 set -ex
 
-for target in adhoc adhoc-e; do
+docker image build \
+    --build-arg VCS_REF="$GIT_SHA1" \
+    --build-arg BUILD_DATE="$(date --rfc-3339 ns)" \
+    --build-arg ODOO_VERSION="$DOCKER_TAG" \
+    --build-arg BASE_IMAGE_REPO="$BASE_IMAGE_REPO" \
+    --build-arg BASE_IMAGE_TAG="$DOCKER_TAG" \
+    --build-arg SAAS_PROVIDER_URL="$SAAS_PROVIDER_URL" \
+    --build-arg SAAS_PROVIDER_PROJECT_ID="$SAAS_PROVIDER_PROJECT_ID" \
+    --build-arg SAAS_PROVIDER_TOKEN="$SAAS_PROVIDER_TOKEN" \
+    --build-arg GITHUB_USER="$GITHUB_USER" \
+    --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
+    --tag "$DOCKER_REPO:$DOCKER_TAG" \
+    .
 
-    # Don't build base if BUILD_TAG_BASE != true
-    if [ "$target" == "adhoc-e" ] && [ -z "$BUILD_TAG_ENTERPRISE" ]; then
-        continue
-    fi
-
-    BASE_IMAGE_TAG="$DOCKER_TAG"
-    if [ "$target" == "adhoc-e" ]; then
-        BASE_IMAGE_TAG="${BASE_IMAGE_TAG}-enterprise"
-    fi
+if [ ! -z "$BUILD_TAG_ENTERPRISE" ]; then
 
     docker image build \
         --build-arg VCS_REF="$GIT_SHA1" \
         --build-arg BUILD_DATE="$(date --rfc-3339 ns)" \
         --build-arg ODOO_VERSION="$DOCKER_TAG" \
-        --build-arg REPOS_YML_TOKEN="$REPOS_YML_TOKEN" \
-        --build-arg ODOO_VERSION_ID="$ODOO_VERSION_ID" \
-        --build-arg GITHUB_USER="$GITHUB_USER" \
+        --build-arg BASE_IMAGE_REPO="$BASE_IMAGE_REPO" \
+        --build-arg BASE_IMAGE_TAG="$DOCKER_TAG-enterprise" \
+        --build-arg SAAS_PROVIDER_URL="$SAAS_PROVIDER_URL" \
+        --build-arg SAAS_PROVIDER_PROJECT_ID="$SAAS_PROVIDER_PROJECT_ID" \
+        --build-arg SAAS_PROVIDER_TOKEN="$SAAS_PROVIDER_TOKEN" \
         --build-arg GITHUB_USER="$GITHUB_USER" \
         --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
-        --tag "$DOCKER_REPO:$BASE_IMAGE_TAG" \
+        --tag "$DOCKER_REPO:$DOCKER_TAG-enterprise" \
         .
-
-done
+fi

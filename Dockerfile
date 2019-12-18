@@ -1,16 +1,15 @@
-ARG BASE_IMAGE_REPO=adhoc/odoo-oca
-ARG BASE_IMAGE_TAG=12.0
+ARG BASE_IMAGE_REPO
+ARG BASE_IMAGE_TAG
 
-FROM $BASE_IMAGE_REPO:$BASE_IMAGE_TAG AS adhoc
+FROM $BASE_IMAGE_REPO:$BASE_IMAGE_TAG
 
 ARG GITHUB_USER
 ARG GITHUB_TOKEN
-ARG REPOS_YML_TOKEN
-ARG ODOO_VERSION_ID
+ARG SAAS_PROVIDER_URL
+ARG SAAS_PROVIDER_PROJECT_ID
+ARG SAAS_PROVIDER_TOKEN
 ENV GITHUB_USER="$GITHUB_USER"
 ENV GITHUB_TOKEN="$GITHUB_TOKEN"
-ENV REPOS_YML_TOKEN="$REPOS_YML_TOKEN"
-ENV ODOO_VERSION_ID="$ODOO_VERSION_ID"
 
 # Default env values used by config generator
 ENV FILESTORE_OPERATIONS_THREADS=3 \
@@ -51,14 +50,21 @@ COPY entrypoint.d/* $RESOURCES/entrypoint.d/
 COPY conf.d/* $RESOURCES/conf.d/
 COPY resources/$ODOO_VERSION/* $RESOURCES/
 
-# Run custom build hook, if available
-RUN $RESOURCES/build
-
-# Aggregate new repositories of this image
-RUN autoaggregate --config "$RESOURCES/repos.yml" --install --output $SOURCES/repositories
+ENV BASE_URL=$SAAS_PROVIDER_URL/odoo_project/$SAAS_PROVIDER_PROJECT_ID
 
 # get repos from odoo-version-group and odoo-version
-RUN wget -O $RESOURCES/odoo_version_group_repos.yml https://www.adhoc.com.ar/odoo_version/$ODOO_VERSION_ID/repos.yml?token=$REPOS_YML_TOKEN
-RUN wget -O $RESOURCES/odoo_version_repos.yml https://www.adhoc.com.ar/odoo_version/$ODOO_VERSION_ID/`date -u +%Y.%m.%d`/repos.yml?token=$REPOS_YML_TOKEN
-RUN autoaggregate --config "$RESOURCES/odoo_version_group_repos.yml" --install --output $SOURCES/repositories
-RUN autoaggregate --config "$RESOURCES/odoo_version_repos.yml" --install --output $SOURCES/repositories
+RUN wget -O $RESOURCES/odoo_project_repos.yml $BASE_URL/repos.yml?token=$SAAS_PROVIDER_TOKEN
+RUN wget -O $RESOURCES/odoo_project_version_repos.yml $BASE_URL/`date -u +%Y.%m.%d`/repos.yml?token=$SAAS_PROVIDER_TOKEN
+RUN wget -O $RESOURCES/custom-build $BASE_URL/build?token=$SAAS_PROVIDER_TOKEN && chmod +x $RESOURCES/custom-build
+RUN wget -O $RESOURCES/entrypoint.d/999-custom-entrypoint $BASE_URL/entrypoint?token=$SAAS_PROVIDER_TOKEN && chmod +x $RESOURCES/entrypoint.d/999-custom-entrypoint
+RUN wget -O $RESOURCES/conf.d/custom.conf $BASE_URL/custom.conf?token=$SAAS_PROVIDER_TOKEN
+
+# Run custom build hook, if available
+USER root
+RUN $RESOURCES/build
+RUN $RESOURCES/custom_build
+USER odoo
+
+# Aggregate new repositories of this image
+RUN autoaggregate --config "$RESOURCES/odoo_project_repos.yml" --install --output $SOURCES/repositories
+RUN autoaggregate --config "$RESOURCES/odoo_project_version_repos.yml" --install --output $SOURCES/repositories

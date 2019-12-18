@@ -1,17 +1,10 @@
 #!/bin/bash
 set -ex
 
-for target in adhoc adhoc-e; do
+docker push "$DOCKER_REPO:$DOCKER_TAG"
 
-    # Don't build base if BUILD_TAG_BASE != true
-    if [ "$target" == "adhoc-e" ] && [ -z "$BUILD_TAG_ENTERPRISE" ]; then
-        continue
-    fi
+if [ ! -z "$BUILD_TAG_ENTERPRISE" ]; then
 
-    BASE_IMAGE_TAG="$DOCKER_TAG"
-    if [ "$target" == "adhoc-e" ]; then
-        BASE_IMAGE_TAG="${BASE_IMAGE_TAG}-enterprise"
-    fi
+    docker push "$DOCKER_REPO:$DOCKER_TAG-enterprise"
 
-    docker push "$DOCKER_REPO:$BASE_IMAGE_TAG"
-done
+fi
