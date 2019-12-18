@@ -62,7 +62,7 @@ RUN wget -O $RESOURCES/conf.d/custom.conf $BASE_URL/custom.conf?token=$SAAS_PROV
 # Run custom build hook, if available
 USER root
 RUN $RESOURCES/build
-RUN $RESOURCES/custom_build
+RUN $RESOURCES/custom-build
 USER odoo
 
 # Aggregate new repositories of this image
