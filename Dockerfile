@@ -42,7 +42,7 @@ RUN apt-get update \
         libxslt1-dev \
         swig \
     # pip dependencies that require build deps
-    && pip3 install pycurl redis==2.10.5 \
+    && sudo -H -u odoo pip install --user --no-cache-dir pycurl redis==2.10.5 \
     # purge
     && apt-get purge -yqq build-essential '*-dev' make \
     && apt-get -yqq autoremove \
