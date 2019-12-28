@@ -9,12 +9,12 @@ BUILD_DATE=`date -u +%Y.%m.%d`
 TAG="$DOCKER_REPO:$DOCKER_TAG"
 NEWTAG="$TAG.$BUILD_DATE"
 
-docker tag "$TAG" "$NEWTAG"
-docker push "$NEWTAG"
+if [ ! -z "$BUILD_TAG_COMMUNITY" ]; then
+    docker tag "$TAG" "$NEWTAG"
+    docker push "$NEWTAG"
+fi
 
 if [ ! -z "$BUILD_TAG_ENTERPRISE" ]; then
-
     docker tag "$TAG-enterprise" "$NEWTAG-enterprise"
     docker push "$NEWTAG-enterprise"
-
 fi

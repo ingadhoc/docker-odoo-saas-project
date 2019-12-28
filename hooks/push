@@ -1,10 +1,10 @@
 #!/bin/bash
 set -ex
 
-docker push "$DOCKER_REPO:$DOCKER_TAG"
+if [ ! -z "$BUILD_TAG_COMMUNITY" ]; then
+    docker push "$DOCKER_REPO:$DOCKER_TAG"
+fi
 
 if [ ! -z "$BUILD_TAG_ENTERPRISE" ]; then
-
     docker push "$DOCKER_REPO:$DOCKER_TAG-enterprise"
-
 fi
