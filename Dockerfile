@@ -54,14 +54,15 @@ COPY entrypoint.d/* $RESOURCES/entrypoint.d/
 COPY conf.d/* $RESOURCES/conf.d/
 COPY resources/$ODOO_VERSION/* $RESOURCES/
 
-ENV BASE_URL=$SAAS_PROVIDER_URL/odoo_project/$DOCKER_IMAGE/$ODOO_VERSION
+ENV BASE_URL=$SAAS_PROVIDER_URL/odoo_project
+ENV URL_SUFIX=?docker_image=$DOCKER_IMAGE\&major_version=$ODOO_VERSION\&token=$SAAS_PROVIDER_TOKEN
 
 # get repos from odoo-version-group and odoo-version
-RUN wget -O $RESOURCES/odoo_project_repos.yml $BASE_URL/repos.yml?token=$SAAS_PROVIDER_TOKEN
-RUN wget -O $RESOURCES/odoo_project_version_repos.yml $BASE_URL/`date -u +%Y.%m.%d`/repos.yml?token=$SAAS_PROVIDER_TOKEN
-RUN wget -O $RESOURCES/custom-build $BASE_URL/build?token=$SAAS_PROVIDER_TOKEN && chmod +x $RESOURCES/custom-build
-RUN wget -O $RESOURCES/entrypoint.d/999-custom-entrypoint $BASE_URL/entrypoint?token=$SAAS_PROVIDER_TOKEN && chmod +x $RESOURCES/entrypoint.d/999-custom-entrypoint
-RUN wget -O $RESOURCES/conf.d/custom.conf $BASE_URL/custom.conf?token=$SAAS_PROVIDER_TOKEN
+RUN wget -O $RESOURCES/odoo_project_repos.yml $BASE_URL/repos.yml$URL_SUFIX
+RUN wget -O $RESOURCES/odoo_project_version_repos.yml $BASE_URL/repos.yml$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d`
+RUN wget -O $RESOURCES/custom-build $BASE_URL/build$URL_SUFIX && chmod +x $RESOURCES/custom-build
+RUN wget -O $RESOURCES/entrypoint.d/999-custom-entrypoint $BASE_URL/entrypoint$URL_SUFIX && chmod +x $RESOURCES/entrypoint.d/999-custom-entrypoint
+RUN wget -O $RESOURCES/conf.d/custom.conf $BASE_URL/custom.conf$URL_SUFIX
 
 # Run custom build hook, if available
 USER root
