@@ -28,7 +28,7 @@ if [ ! -z "$BUILD_TAG_ENTERPRISE" ]; then
         --build-arg VCS_REF="$GIT_SHA1" \
         --build-arg BUILD_DATE="$(date --rfc-3339 ns)" \
         --build-arg DOCKER_IMAGE="$DOCKER_IMAGE" \
-        --build-arg DOCKER_TAG_SUFFIX="$DOCKER_TAG_SUFFIX"
+        --build-arg DOCKER_TAG_SUFFIX="$DOCKER_TAG_SUFFIX" \
         --build-arg BASE_IMAGE_REPO="$BASE_IMAGE_REPO" \
         --build-arg BASE_IMAGE_TAG="$DOCKER_TAG-$DOCKER_TAG_SUFFIX" \
         --build-arg SAAS_PROVIDER_URL="$SAAS_PROVIDER_URL" \
