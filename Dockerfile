@@ -8,6 +8,7 @@ ARG GITHUB_TOKEN
 ARG GITLAB_USER
 ARG GITLAB_TOKEN
 ARG DOCKER_IMAGE
+ARG DOCKER_TAG_SUFFIX
 ARG SAAS_PROVIDER_URL
 ARG SAAS_PROVIDER_TOKEN
 ENV GITHUB_USER="$GITHUB_USER"
@@ -54,8 +55,8 @@ COPY entrypoint.d/* $RESOURCES/entrypoint.d/
 COPY conf.d/* $RESOURCES/conf.d/
 COPY resources/$ODOO_VERSION/* $RESOURCES/
 
-ENV BASE_URL=$SAAS_PROVIDER_URL/odoo_project
-ENV URL_SUFIX=?docker_image=$DOCKER_IMAGE\&major_version=$ODOO_VERSION\&token=$SAAS_PROVIDER_TOKEN
+ENV BASE_URL="${SAAS_PROVIDER_URL}/odoo_project"
+ENV URL_SUFIX="?docker_image=${DOCKER_IMAGE}&major_version=${ODOO_VERSION}&suffix=${DOCKER_TAG_SUFFIX}&token=${SAAS_PROVIDER_TOKEN}"
 
 # get repos from odoo-version-group and odoo-version
 RUN wget -O $RESOURCES/odoo_project_repos.yml $BASE_URL/repos.yml$URL_SUFIX

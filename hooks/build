@@ -21,18 +21,22 @@ if [ ! -z "$BUILD_TAG_COMMUNITY" ]; then
 fi
 
 if [ ! -z "$BUILD_TAG_ENTERPRISE" ]; then
+
+    DOCKER_TAG_SUFFIX=enterprise
+
     docker image build \
         --build-arg VCS_REF="$GIT_SHA1" \
         --build-arg BUILD_DATE="$(date --rfc-3339 ns)" \
         --build-arg DOCKER_IMAGE="$DOCKER_IMAGE" \
+        --build-arg DOCKER_TAG_SUFFIX="$DOCKER_TAG_SUFFIX"
         --build-arg BASE_IMAGE_REPO="$BASE_IMAGE_REPO" \
-        --build-arg BASE_IMAGE_TAG="$DOCKER_TAG-enterprise" \
+        --build-arg BASE_IMAGE_TAG="$DOCKER_TAG-$DOCKER_TAG_SUFFIX" \
         --build-arg SAAS_PROVIDER_URL="$SAAS_PROVIDER_URL" \
         --build-arg SAAS_PROVIDER_TOKEN="$SAAS_PROVIDER_TOKEN" \
         --build-arg GITHUB_USER="$GITHUB_USER" \
         --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
         --build-arg GITLAB_USER="$GITLAB_USER" \
         --build-arg GITLAB_TOKEN="$GITLAB_TOKEN" \
-        --tag "$DOCKER_REPO:$DOCKER_TAG-enterprise" \
+        --tag "$DOCKER_REPO:$DOCKER_TAG-$DOCKER_TAG_SUFFIX" \
         .
 fi
