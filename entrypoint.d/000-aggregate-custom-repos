@@ -3,12 +3,6 @@
 import os
 from subprocess import check_call
 
-try:
-    from urllib.parse import unquote
-except ImportError:
-    from urlparse import unquote
-
-
 import logging
 _logger = logging.getLogger(__name__)
 
@@ -16,13 +10,6 @@ _logger = logging.getLogger(__name__)
 SOURCES = os.environ.get('SOURCES')
 RESOURCES = os.environ.get('RESOURCES')
 REPOS_YAML = os.environ.get('REPOS_YAML')
-
-# Fallback to deprecated url-encoded REPOS_YML
-# Importing urllib.parse can be removed after full deprecation
-REPOS_YML = os.environ.get('REPOS_YML')
-if not REPOS_YAML and REPOS_YML:
-    _logger.warning('Encoded REPOS_YML is deprecated. Use REPOS_YAML instead.')
-    REPOS_YAML = unquote(REPOS_YML)
 
 if REPOS_YAML and SOURCES:
     content = REPOS_YAML
