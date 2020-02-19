@@ -45,7 +45,7 @@ RUN apt-get update \
     # pip dependencies that require build deps
     && sudo -H -u odoo pip install --user --no-cache-dir pycurl redis==2.10.5 \
     # purge
-    && apt-get purge -yqq build-essential '*-dev' make \
+    && ! apt-get purge -yqq build-essential '*-dev' make \
     && apt-get -yqq autoremove \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 USER odoo
