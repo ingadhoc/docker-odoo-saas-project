@@ -59,18 +59,18 @@ ENV BASE_URL="${SAAS_PROVIDER_URL}/odoo_project"
 ENV URL_SUFIX="?docker_image=${DOCKER_IMAGE}&major_version=${ODOO_VERSION}&suffix=${DOCKER_TAG_SUFFIX}&token=${SAAS_PROVIDER_TOKEN}"
 
 # get repos from odoo-version-group and odoo-version
-RUN wget -O $RESOURCES/odoo_project_repos.yml $BASE_URL/repos.yml$URL_SUFIX
-RUN wget -O $RESOURCES/odoo_project_version_repos.yml $BASE_URL/repos.yml$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d`
-RUN wget -O $RESOURCES/custom-build $BASE_URL/build$URL_SUFIX && chmod +x $RESOURCES/custom-build
-RUN wget -O $RESOURCES/entrypoint.d/999-custom-entrypoint $BASE_URL/entrypoint$URL_SUFIX && chmod +x $RESOURCES/entrypoint.d/999-custom-entrypoint
-RUN wget -O $RESOURCES/conf.d/custom.conf $BASE_URL/custom.conf$URL_SUFIX
+RUN wget -O $RESOURCES/saas-odoo_project_repos.yml $BASE_URL/repos.yml$URL_SUFIX
+RUN wget -O $RESOURCES/saas-odoo_project_version_repos.yml $BASE_URL/repos.yml$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d`
+RUN wget -O $RESOURCES/saas-build $BASE_URL/build$URL_SUFIX && chmod +x $RESOURCES/saas-build
+RUN wget -O $RESOURCES/entrypoint.d/999-saas-entrypoint $BASE_URL/entrypoint$URL_SUFIX && chmod +x $RESOURCES/entrypoint.d/999-saas-entrypoint
+RUN wget -O $RESOURCES/conf.d/999-saas-custom.conf $BASE_URL/custom.conf$URL_SUFIX
 
 # Run custom build hook, if available
 USER root
 RUN $RESOURCES/build
-RUN $RESOURCES/custom-build
+RUN $RESOURCES/saas-build
 USER odoo
 
 # Aggregate new repositories of this image
-RUN autoaggregate --config "$RESOURCES/odoo_project_repos.yml" --install --output $SOURCES/repositories
-RUN autoaggregate --config "$RESOURCES/odoo_project_version_repos.yml" --install --output $SOURCES/repositories
+RUN autoaggregate --config "$RESOURCES/saas-odoo_project_repos.yml" --install --output $SOURCES/repositories
+RUN autoaggregate --config "$RESOURCES/saas-odoo_project_version_repos.yml" --install --output $SOURCES/repositories
