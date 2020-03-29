@@ -3,22 +3,16 @@
 import os
 from subprocess import check_call
 
-try:
-    from urllib.parse import unquote
-except ImportError:
-    from urlparse import unquote
-
-
 import logging
 _logger = logging.getLogger(__name__)
 
 # Recreate and run git-aggregator
 SOURCES = os.environ.get('SOURCES')
 RESOURCES = os.environ.get('RESOURCES')
-REPOS_YML = os.environ.get('REPOS_YML')
+REPOS_YAML = os.environ.get('REPOS_YAML')
 
-if REPOS_YML and SOURCES:
-    content = unquote(REPOS_YML)
+if REPOS_YAML and SOURCES:
+    content = REPOS_YAML
     repos_file = os.path.join(RESOURCES, "custom-repos.yml")
     with open(repos_file, 'w+') as file:
         file.write(content)

@@ -8,6 +8,7 @@ ARG GITHUB_TOKEN
 ARG GITLAB_USER
 ARG GITLAB_TOKEN
 ARG DOCKER_IMAGE
+ARG DOCKER_TAG_SUFFIX
 ARG SAAS_PROVIDER_URL
 ARG SAAS_PROVIDER_TOKEN
 ENV GITHUB_USER="$GITHUB_USER"
@@ -44,7 +45,7 @@ RUN apt-get update \
     # pip dependencies that require build deps
     && sudo -H -u odoo pip install --user --no-cache-dir pycurl redis==2.10.5 \
     # purge
-    && apt-get purge -yqq build-essential '*-dev' make \
+    && apt-get purge -yqq build-essential '*-dev' make || true \
     && apt-get -yqq autoremove \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 USER odoo
@@ -54,22 +55,22 @@ COPY entrypoint.d/* $RESOURCES/entrypoint.d/
 COPY conf.d/* $RESOURCES/conf.d/
 COPY resources/$ODOO_VERSION/* $RESOURCES/
 
-ENV BASE_URL=$SAAS_PROVIDER_URL/odoo_project
-ENV URL_SUFIX=?docker_image=$DOCKER_IMAGE\&major_version=$ODOO_VERSION\&token=$SAAS_PROVIDER_TOKEN
+ENV BASE_URL="${SAAS_PROVIDER_URL}/odoo_project"
+ENV URL_SUFIX="?docker_image=${DOCKER_IMAGE}&major_version=${ODOO_VERSION}&suffix=${DOCKER_TAG_SUFFIX}&token=${SAAS_PROVIDER_TOKEN}"
 
 # get repos from odoo-version-group and odoo-version
-RUN wget -O $RESOURCES/odoo_project_repos.yml $BASE_URL/repos.yml$URL_SUFIX
-RUN wget -O $RESOURCES/odoo_project_version_repos.yml $BASE_URL/repos.yml$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d`
-RUN wget -O $RESOURCES/custom-build $BASE_URL/build$URL_SUFIX && chmod +x $RESOURCES/custom-build
-RUN wget -O $RESOURCES/entrypoint.d/999-custom-entrypoint $BASE_URL/entrypoint$URL_SUFIX && chmod +x $RESOURCES/entrypoint.d/999-custom-entrypoint
-RUN wget -O $RESOURCES/conf.d/custom.conf $BASE_URL/custom.conf$URL_SUFIX
+RUN wget -O $RESOURCES/saas-odoo_project_repos.yml $BASE_URL/repos.yml$URL_SUFIX
+RUN wget -O $RESOURCES/saas-odoo_project_version_repos.yml $BASE_URL/repos.yml$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d`
+RUN wget -O $RESOURCES/saas-build $BASE_URL/build$URL_SUFIX && chmod +x $RESOURCES/saas-build
+RUN wget -O $RESOURCES/entrypoint.d/999-saas-entrypoint $BASE_URL/entrypoint$URL_SUFIX && chmod +x $RESOURCES/entrypoint.d/999-saas-entrypoint
+RUN wget -O $RESOURCES/conf.d/999-saas-custom.conf $BASE_URL/custom.conf$URL_SUFIX
 
 # Run custom build hook, if available
 USER root
 RUN $RESOURCES/build
-RUN $RESOURCES/custom-build
+RUN $RESOURCES/saas-build
 USER odoo
 
 # Aggregate new repositories of this image
-RUN autoaggregate --config "$RESOURCES/odoo_project_repos.yml" --install --output $SOURCES/repositories
-RUN autoaggregate --config "$RESOURCES/odoo_project_version_repos.yml" --install --output $SOURCES/repositories
+RUN autoaggregate --config "$RESOURCES/saas-odoo_project_repos.yml" --install --output $SOURCES/repositories
+RUN autoaggregate --config "$RESOURCES/saas-odoo_project_version_repos.yml" --install --output $SOURCES/repositories
