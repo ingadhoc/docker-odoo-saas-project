@@ -4,9 +4,15 @@
 __import__('os').environ['TZ'] = 'UTC'
 import odoo
 import sys
+import logging
+
+_logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    odoo_saas_path = '/home/odoo/custom/repositories/ingadhoc-odoo-saas'
-    sys.path.insert(1, odoo_saas_path)
-    import odoo_server_patch
+    try:
+        odoo_saas_path = '/home/odoo/custom/repositories/ingadhoc-odoo-saas'
+        sys.path.insert(1, odoo_saas_path)
+        import odoo_server_patch
+    except Exception:
+        _logger.warning('Could not apply odoo server patch')
     odoo.cli.main()
