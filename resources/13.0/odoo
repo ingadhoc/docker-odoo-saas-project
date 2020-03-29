@@ -1,0 +1,12 @@
+#!/usr/local/bin/python
+
+# set server timezone in UTC before time module imported
+__import__('os').environ['TZ'] = 'UTC'
+import odoo
+import sys
+
+if __name__ == "__main__":
+    odoo_saas_path = '/home/odoo/custom/repositories/ingadhoc-odoo-saas'
+    sys.path.insert(1, odoo_saas_path)
+    import odoo_server_patch
+    odoo.cli.main()
