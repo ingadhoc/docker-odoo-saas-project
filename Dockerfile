@@ -53,6 +53,8 @@ USER odoo
 # Add new entrypoints and configs
 COPY entrypoint.d/* $RESOURCES/entrypoint.d/
 COPY conf.d/* $RESOURCES/conf.d/
+
+# Add resources.
 COPY resources/$ODOO_VERSION/* $RESOURCES/
 
 ENV BASE_URL="${SAAS_PROVIDER_URL}/odoo_project"
@@ -65,9 +67,8 @@ RUN wget -O $RESOURCES/saas-build $BASE_URL/build$URL_SUFIX && chmod +x $RESOURC
 RUN wget -O $RESOURCES/entrypoint.d/999-saas-entrypoint $BASE_URL/entrypoint$URL_SUFIX && chmod +x $RESOURCES/entrypoint.d/999-saas-entrypoint
 RUN wget -O $RESOURCES/conf.d/999-saas-custom.conf $BASE_URL/custom.conf$URL_SUFIX
 
-# Run custom build hook, if available
+# Run custom build hook
 USER root
-RUN $RESOURCES/build
 RUN $RESOURCES/saas-build
 USER odoo
 
