@@ -3,7 +3,7 @@ import sys, os
 # EASY-INSTALL-DEV-SCRIPT: 'odoo==13.0','odoo'
 __requires__ = 'odoo==13.0'
 __import__('pkg_resources').require('odoo==13.0')
-__file__ = os.environ.get('ODOO_BIN_PATH', '/home/odoo/src/odoo/setup/odoo')
+__file__ = '/home/odoo/src/odoo/setup/odoo'
 odoo_saas_path = os.environ.get('ODOO_SAAS_PATH')
 
 if odoo_saas_path:
