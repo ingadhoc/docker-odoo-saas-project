@@ -18,11 +18,14 @@ if REPOS_YAML and SOURCES:
         file.write(content)
 
     _logger.info('Running git aggregator on custom-repos.yml..')
-    check_call([
-        'autoaggregate',
-        '--config',
-        repos_file,
-        '--install',
-        '--output',
-        os.path.join(SOURCES, 'repositories'),
-    ])
+    try:
+        check_call([
+            'autoaggregate',
+            '--config',
+            repos_file,
+            '--install',
+            '--output',
+            os.path.join(SOURCES, 'repositories'),
+        ])
+    except Exception as e:
+        _logger.error("IMPORTANT! Couldn't run gitaggregate correctly. This is what we get: %s" % e)
