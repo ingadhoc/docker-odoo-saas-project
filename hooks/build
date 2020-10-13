@@ -1,42 +1,70 @@
-#!/bin/bash
-set -ex
+#!/usr/bin/env python
+import os
+import datetime
+from subprocess import check_call
 
-DOCKER_IMAGE=${DOCKER_REPO/#index.docker.io\/}
+def env(key):
+    return os.environ.get(key, "")
 
-if [ ! -z "$BUILD_TAG_COMMUNITY" ]; then
-    docker image build \
-        --build-arg VCS_REF="$GIT_SHA1" \
-        --build-arg BUILD_DATE="$(date --rfc-3339 ns)" \
-        --build-arg DOCKER_IMAGE="$DOCKER_IMAGE" \
-        --build-arg BASE_IMAGE_REPO="$BASE_IMAGE_REPO" \
-        --build-arg BASE_IMAGE_TAG="$DOCKER_TAG" \
-        --build-arg SAAS_PROVIDER_URL="$SAAS_PROVIDER_URL" \
-        --build-arg SAAS_PROVIDER_TOKEN="$SAAS_PROVIDER_TOKEN" \
-        --build-arg GITHUB_USER="$GITHUB_USER" \
-        --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
-        --build-arg GITLAB_USER="$GITLAB_USER" \
-        --build-arg GITLAB_TOKEN="$GITLAB_TOKEN" \
-        --tag "$DOCKER_REPO:$DOCKER_TAG" \
-        .
-fi
+# Build instructions
+FROM_DOCKER_REPO = env("FROM_DOCKER_REPO") or env("BASE_IMAGE_REPO")
+INSTALL_ODOO = env("INSTALL_ODOO")
+INSTALL_ENTERPRISE = env("INSTALL_ENTERPRISE")
+BUILD_TAG_COMMUNITY = env("BUILD_TAG_COMMUNITY")
+BUILD_TAG_ENTERPRISE = env("BUILD_TAG_ENTERPRISE")
 
-if [ ! -z "$BUILD_TAG_ENTERPRISE" ]; then
+# Saas Build
+DOCKER_REPO = env("DOCKER_REPO")
+DOCKER_TAG = env("DOCKER_TAG")
+SAAS_PROVIDER_URL = env("SAAS_PROVIDER_URL")
+SAAS_PROVIDER_TOKEN = env("SAAS_PROVIDER_TOKEN")
 
-    DOCKER_TAG_SUFFIX=enterprise
+# Do not include these in public images
+# Only private images
+GITHUB_USER = env("GITHUB_USER")
+GITHUB_TOKEN = env("GITHUB_TOKEN")
+GITLAB_USER = env("GITLAB_USER")
+GITLAB_TOKEN = env("GITLAB_TOKEN")
 
-    docker image build \
-        --build-arg VCS_REF="$GIT_SHA1" \
-        --build-arg BUILD_DATE="$(date --rfc-3339 ns)" \
-        --build-arg DOCKER_IMAGE="$DOCKER_IMAGE" \
-        --build-arg DOCKER_TAG_SUFFIX="$DOCKER_TAG_SUFFIX" \
-        --build-arg BASE_IMAGE_REPO="$BASE_IMAGE_REPO" \
-        --build-arg BASE_IMAGE_TAG="$DOCKER_TAG-$DOCKER_TAG_SUFFIX" \
-        --build-arg SAAS_PROVIDER_URL="$SAAS_PROVIDER_URL" \
-        --build-arg SAAS_PROVIDER_TOKEN="$SAAS_PROVIDER_TOKEN" \
-        --build-arg GITHUB_USER="$GITHUB_USER" \
-        --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
-        --build-arg GITLAB_USER="$GITLAB_USER" \
-        --build-arg GITLAB_TOKEN="$GITLAB_TOKEN" \
-        --tag "$DOCKER_REPO:$DOCKER_TAG-$DOCKER_TAG_SUFFIX" \
-        .
-fi
+# Build information
+GIT_SHA1 = env("GIT_SHA1")
+BUILD_DATE = datetime.date.today().strftime("%Y-%m-%d")
+
+
+def build(enterprise=False):
+    # Regardless of which combination, these arguments are always present
+    args = [
+        "--build-arg", "VCS_REF=%s" % GIT_SHA1,
+        "--build-arg", "BUILD_DATE=%s" % BUILD_DATE,
+        "--build-arg", "FROM_DOCKER_REPO=%s" % FROM_DOCKER_REPO,
+        "--build-arg", "DOCKER_REPO=%s" % DOCKER_REPO,
+        "--build-arg", "SAAS_PROVIDER_URL=%s" % SAAS_PROVIDER_URL,
+        "--build-arg", "SAAS_PROVIDER_TOKEN=%s" % SAAS_PROVIDER_TOKEN,
+        "--build-arg", "GITHUB_USER=%s" % GITHUB_USER,
+        "--build-arg", "GITHUB_TOKEN=%s" % GITHUB_TOKEN,
+        "--build-arg", "GITLAB_USER=%s" % GITLAB_USER,
+        "--build-arg", "GITLAB_TOKEN=%s" % GITLAB_TOKEN,
+    ]
+    # If we are installing odoo or enterprise, it means
+    # we're dealing with the onbuild base image
+    if any([INSTALL_ODOO, INSTALL_ENTERPRISE]):
+        args += ["--build-arg", "FROM_DOCKER_TAG=%s-onbuild" % DOCKER_TAG]
+        args += ["--build-arg", "INSTALL_ODOO=%s" % INSTALL_ODOO]
+        if enterprise:
+            args += ["--build-arg", "INSTALL_ENTERPRISE=%s" % INSTALL_ENTERPRISE]
+    else:
+        from_tag = "%s-enterprise" % DOCKER_TAG if enterprise else DOCKER_TAG
+        args += ["--build-arg", "FROM_DOCKER_TAG=%s" % from_tag]
+    # Define the build tag
+    build_tag = "%s:%s" % (DOCKER_REPO, DOCKER_TAG)
+    if enterprise:
+        build_tag = "%s-enterprise" % build_tag
+    # Build
+    check_call(["docker", "image", "build"] + args + ["--tag", build_tag, "."])
+
+if BUILD_TAG_COMMUNITY:
+    build(enterprise=False)
+
+if BUILD_TAG_ENTERPRISE:
+    build(enterprise=True)
+
