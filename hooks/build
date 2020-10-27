@@ -65,6 +65,6 @@ def build(enterprise=False):
 if BUILD_TAG_COMMUNITY:
     build(enterprise=False)
 
-if BUILD_TAG_ENTERPRISE:
+if BUILD_TAG_ENTERPRISE and DOCKER_TAG not in ["7.0", "8.0"]:
     build(enterprise=True)
 

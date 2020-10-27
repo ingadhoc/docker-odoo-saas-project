@@ -1,10 +1,17 @@
-#!/bin/bash
-set -ex
+#!/usr/bin/env python
+import os
+from subprocess import check_call
 
-if [ ! -z "$BUILD_TAG_COMMUNITY" ]; then
-    docker push "$DOCKER_REPO:$DOCKER_TAG"
-fi
+def env(key):
+    return os.environ.get(key, "")
 
-if [ ! -z "$BUILD_TAG_ENTERPRISE" ]; then
-    docker push "$DOCKER_REPO:$DOCKER_TAG-enterprise"
-fi
+BUILD_TAG_COMMUNITY = env("BUILD_TAG_COMMUNITY")
+BUILD_TAG_ENTERPRISE = env("BUILD_TAG_ENTERPRISE")
+DOCKER_REPO = env("DOCKER_REPO")
+DOCKER_TAG = env("DOCKER_TAG")
+
+if BUILD_TAG_COMMUNITY:
+    check_call(["docker", "push", "%s:%s" % (DOCKER_REPO, DOCKER_TAG)])
+
+if BUILD_TAG_ENTERPRISE and DOCKER_TAG not in ["7.0", "8.0"]:
+    check_call(["docker", "push", "%s:%s-enterprise" % (DOCKER_REPO, DOCKER_TAG)])

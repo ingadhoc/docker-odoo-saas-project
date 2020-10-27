@@ -1,20 +1,28 @@
-#!/bin/bash
-set -ex
+#!/usr/bin/env python
+import os
+import datetime
+from subprocess import check_call
 
-# Version control tags
-# We append BUILD_DATE to the image tag.
 
-BUILD_DATE=`date -u +%Y.%m.%d`
+def env(key):
+    return os.environ.get(key, "")
 
-TAG="$DOCKER_REPO:$DOCKER_TAG"
-NEWTAG="$TAG.$BUILD_DATE"
 
-if [ ! -z "$BUILD_TAG_COMMUNITY" ]; then
-    docker tag "$TAG" "$NEWTAG"
-    docker push "$NEWTAG"
-fi
+BUILD_TAG_COMMUNITY = env("BUILD_TAG_COMMUNITY")
+BUILD_TAG_ENTERPRISE = env("BUILD_TAG_ENTERPRISE")
+DOCKER_REPO = env("DOCKER_REPO")
+DOCKER_TAG = env("DOCKER_TAG")
+BUILD_DATE = datetime.date.today().strftime("%Y.%m.%d")
 
-if [ ! -z "$BUILD_TAG_ENTERPRISE" ]; then
-    docker tag "$TAG-enterprise" "$NEWTAG-enterprise"
-    docker push "$NEWTAG-enterprise"
-fi
+TAG = "%s:%s" % (DOCKER_REPO, DOCKER_TAG)
+VERSION_TAG = "%s.%s" % (TAG, BUILD_DATE)
+
+if BUILD_TAG_COMMUNITY:
+    check_call(["docker", "tag", TAG, VERSION_TAG])
+    check_call(["docker", "push", VERSION_TAG])
+
+if BUILD_TAG_ENTERPRISE and DOCKER_TAG not in ["7.0", "8.0"]:
+    EE_TAG = "%s-enterprise" % TAG
+    EE_VERSION_TAG = "%s-enterprise" % VERSION_TAG
+    check_call(["docker", "tag", EE_TAG, EE_VERSION_TAG])
+    check_call(["docker", "push", EE_VERSION_TAG])
