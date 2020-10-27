@@ -3,8 +3,10 @@ import os
 import datetime
 from subprocess import check_call
 
+
 def env(key):
     return os.environ.get(key, "")
+
 
 # Build instructions
 FROM_DOCKER_REPO = env("FROM_DOCKER_REPO") or env("BASE_IMAGE_REPO")
@@ -38,6 +40,7 @@ def build(enterprise=False):
         "--build-arg", "BUILD_DATE=%s" % BUILD_DATE,
         "--build-arg", "FROM_DOCKER_REPO=%s" % FROM_DOCKER_REPO,
         "--build-arg", "DOCKER_REPO=%s" % DOCKER_REPO,
+        "--build-arg", "ODOO_VERSION=%s" % DOCKER_TAG,
         "--build-arg", "SAAS_PROVIDER_URL=%s" % SAAS_PROVIDER_URL,
         "--build-arg", "SAAS_PROVIDER_TOKEN=%s" % SAAS_PROVIDER_TOKEN,
         "--build-arg", "GITHUB_USER=%s" % GITHUB_USER,
@@ -51,7 +54,10 @@ def build(enterprise=False):
         args += ["--build-arg", "FROM_DOCKER_TAG=%s-onbuild" % DOCKER_TAG]
         args += ["--build-arg", "INSTALL_ODOO=%s" % INSTALL_ODOO]
         if enterprise:
-            args += ["--build-arg", "INSTALL_ENTERPRISE=%s" % INSTALL_ENTERPRISE]
+            args += [
+                "--build-arg",
+                "INSTALL_ENTERPRISE=%s" % INSTALL_ENTERPRISE
+            ]
     else:
         from_tag = "%s-enterprise" % DOCKER_TAG if enterprise else DOCKER_TAG
         args += ["--build-arg", "FROM_DOCKER_TAG=%s" % from_tag]
@@ -62,9 +68,9 @@ def build(enterprise=False):
     # Build
     check_call(["docker", "image", "build"] + args + ["--tag", build_tag, "."])
 
+
 if BUILD_TAG_COMMUNITY:
     build(enterprise=False)
 
 if BUILD_TAG_ENTERPRISE and DOCKER_TAG not in ["7.0", "8.0"]:
     build(enterprise=True)
-
