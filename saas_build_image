@@ -27,7 +27,7 @@ def wget(url, output, force=True, params=None):
         else:
             os.remove(output)
     if not r.content:
-        logger.warning("%s returned an empty file" % url)
+        logger.warning("GET %s [%s] returned an empty file" % (url, params))
         return False
     with open(output, 'wb') as file:
         file.write(r.content)
