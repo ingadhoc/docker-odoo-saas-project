@@ -136,10 +136,10 @@ def main(args):
     preload = []
     if config['db_name']:
         preload = config['db_name'].split(',')
-        # agregado...
+        # INIT PATCH
         db_list = odoo.service.db.list_dbs(False)
         preload = list(set(db_list) & set(preload))
-        # fin agregado
+        # END PATCH
         for db_name in preload:
             try:
                 odoo.service.db._create_empty_database(db_name)

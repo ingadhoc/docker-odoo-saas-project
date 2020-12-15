@@ -132,10 +132,15 @@ def main(args):
     preload = []
     if config['db_name']:
         preload = config['db_name'].split(',')
-        # INIT HACK
+        # INIT PATCH
         db_list = odoo.service.db.list_dbs(False)
+        if not odoo.tools.config['dbfilter'] and odoo.tools.config['db_name'] and db_list:
+            for db_name in db_list:
+                if not odoo.service.db.exp_db_exist(db_name):
+                    _logger.warning('Skipping auto-creation of db: %s' % db_name)
+                    db_list.remove(db_name)
         preload = list(set(db_list) & set(preload))
-        # END HACK
+        # END PATCH
         for db_name in preload:
             try:
                 odoo.service.db._create_empty_database(db_name)

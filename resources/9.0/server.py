@@ -132,10 +132,10 @@ def main(args):
     if config['db_name']:
         preload = config['db_name'].split(',')
         for db_name in preload:
-            # Agregado
+            # INIT PATCH
             _logger.warning('Skipping auto-creation of db: %s' % db_name)
             continue
-            # Fin agregado
+            # END PATCH
             try:
                 openerp.service.db._create_empty_database(db_name)
             except openerp.service.db.DatabaseExists:

@@ -136,18 +136,15 @@ def main(args):
     preload = []
     if config['db_name']:
         preload = config['db_name'].split(',')
-        # agregado...
+        # INIT PATCH
         db_list = odoo.service.db.list_dbs(False)
-
-        # por alguna razon dejo de andar el monkey patch con la nueva imagen.
-        # igualmete esto lo vamos a mejorar y no va a hacer mas falta
         if not odoo.tools.config['dbfilter'] and odoo.tools.config['db_name'] and db_list:
             for db_name in db_list:
                 if not odoo.service.db.exp_db_exist(db_name):
+                    _logger.warning('Skipping auto-creation of db: %s' % db_name)
                     db_list.remove(db_name)
-
         preload = list(set(db_list) & set(preload))
-        # fin agregado
+        # END PATCH
         for db_name in preload:
             try:
                 odoo.service.db._create_empty_database(db_name)
