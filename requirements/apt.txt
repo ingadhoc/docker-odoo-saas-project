@@ -1,3 +1,5 @@
 swig
+procps
 htop
+ftp
 rsync
