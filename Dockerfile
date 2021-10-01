@@ -30,7 +30,7 @@ USER root
 RUN apt-get update \
     && apt-get install -y \
         build-essential \
-        ca-certificate \
+        ca-certificates \
         libcups2-dev \
         libcurl4-openssl-dev \
         parallel \
