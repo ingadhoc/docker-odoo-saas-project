@@ -17,6 +17,7 @@ ENV GITLAB_USER="$GITLAB_USER"
 ENV GITLAB_TOKEN="$GITLAB_TOKEN"
 
 # Default env values used by config generator
+# TODO remove after no more customers on v13 and also remove them on 90-saas-client.conf
 ENV FILESTORE_OPERATIONS_THREADS=3 \
     FILESTORE_COPY_HARD_LINK=True \
     ENABLE_REDIS=False \
