@@ -5,16 +5,14 @@ FROM $BASE_IMAGE_REPO:$BASE_IMAGE_TAG
 
 ARG GITHUB_USER
 ARG GITHUB_TOKEN
-ARG GITLAB_USER
+ARG GITHUB_BOT_TOKEN
 ARG GITLAB_TOKEN
 ARG DOCKER_IMAGE
-ARG DOCKER_TAG_SUFFIX
 ARG SAAS_PROVIDER_URL
 ARG SAAS_PROVIDER_TOKEN
 ENV GITHUB_USER="$GITHUB_USER"
 ENV GITHUB_TOKEN="$GITHUB_TOKEN"
-ENV GITLAB_USER="$GITLAB_USER"
-ENV GITLAB_TOKEN="$GITLAB_TOKEN"
+ENV GITHUB_BOT_TOKEN="$GITHUB_BOT_TOKEN"
 
 # Default env values used by config generator
 # TODO remove after no more customers on v13 and also remove them on 90-saas-client.conf
@@ -60,7 +58,7 @@ COPY conf.d/* $RESOURCES/conf.d/
 COPY resources/$ODOO_VERSION/* $RESOURCES/
 
 ENV BASE_URL="${SAAS_PROVIDER_URL}/odoo_project"
-ENV URL_SUFIX="?docker_image=${DOCKER_IMAGE}&major_version=${ODOO_VERSION}&suffix=${DOCKER_TAG_SUFFIX}&token=${SAAS_PROVIDER_TOKEN}"
+ENV URL_SUFIX="?docker_image=${DOCKER_IMAGE}&major_version=${ODOO_VERSION}&token=${SAAS_PROVIDER_TOKEN}"
 
 # get repos from odoo-version-group and odoo-version
 RUN wget -O $RESOURCES/saas-odoo_project_repos.yml $BASE_URL/repos.yml$URL_SUFIX
