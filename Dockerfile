@@ -75,3 +75,6 @@ USER odoo
 # Aggregate new repositories of this image
 RUN autoaggregate --config "$RESOURCES/saas-odoo_project_repos.yml" --install --output $SOURCES/repositories
 RUN autoaggregate --config "$RESOURCES/saas-odoo_project_version_repos.yml" --install --output $SOURCES/repositories
+
+# Install odoo
+RUN pip install --user --no-cache-dir -e $SOURCES/odoo
