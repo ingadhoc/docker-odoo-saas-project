@@ -78,3 +78,6 @@ RUN autoaggregate --config "$RESOURCES/saas-odoo_project_version_repos.yml" --in
 
 # Install odoo
 RUN pip install --user --no-cache-dir -e $SOURCES/odoo
+
+# apply patch for environment v2
+RUN $RESOURCES/apply_patch_2_0
