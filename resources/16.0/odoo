@@ -1,8 +1,8 @@
 #!/usr/local/bin/python
 import sys, os
 # EASY-INSTALL-DEV-SCRIPT: 'odoo==14.0','odoo'
-__requires__ = 'odoo==15.0'
-__import__('pkg_resources').require('odoo==15.0')
+__requires__ = 'odoo==16.0'
+__import__('pkg_resources').require('odoo==16.0')
 __file__ = '/home/odoo/src/odoo/setup/odoo'
 odoo_saas_path = os.environ.get('ODOO_SAAS_PATH')
 
