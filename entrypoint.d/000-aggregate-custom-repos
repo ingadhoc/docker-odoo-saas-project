@@ -23,7 +23,6 @@ if REPOS_YAML and SOURCES:
             'autoaggregate',
             '--config',
             repos_file,
-            '--install',
             '--output',
             os.path.join(SOURCES, 'repositories'),
         ])
