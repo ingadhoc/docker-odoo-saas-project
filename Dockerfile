@@ -51,7 +51,7 @@ RUN autoaggregate --config "$RESOURCES/saas-odoo_project_repos.yml" --output $SO
 RUN autoaggregate --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output $SOURCES/repositories
 
 # Report to provider all repos HEADs
-RUN find $SOURCES -name "*.git" -type d -execdir sh -c "pwd && echo , && git rev-parse HEAD && echo \;; " \; | xargs -n4 > /tmp/repo_heads.txt ; curl -X POST $BASE_URL/report_sha$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d` -H "Content-Type: application/json" -H "Accept: application/json" -d "@/tmp/repo_heads.txt"
+RUN find $SOURCES -name "*.git" -type d -execdir sh -c "pwd && echo , && git log -n 1 origin/${ODOO_VERSION} --pretty=format:\"%H\" && echo \;; " \; | xargs -n3 > /tmp/repo_heads.txt ; curl -X POST $BASE_URL/report_sha$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d` -H "Content-Type: application/json" -H "Accept: application/json" -d "@/tmp/repo_heads.txt"
 
 # Install odoo
 RUN pip install --user --no-cache-dir -e $SOURCES/odoo
