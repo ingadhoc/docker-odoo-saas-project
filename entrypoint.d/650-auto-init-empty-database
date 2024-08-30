@@ -1,0 +1,33 @@
+#!/bin/bash
+set -e
+
+# Automatically initialize an empty database created externally
+# This is used on the platform, where the database is created before launching Odoo,
+# with an user that has limited postgres permissions.
+
+function pg_exists() {
+    if [ $(psql -d postgres -tAc "SELECT COUNT(*) FROM pg_database WHERE datname = '$PGDATABASE'") -eq 1 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function pg_table_count() {
+    psql -d $PGDATABASE -tAc "SELECT COUNT(*)
+               FROM information_schema.tables
+               WHERE table_schema NOT IN ('pg_catalog', 'information_schema')"
+}
+
+function pg_is_empty() {
+    if [ $(pg_table_count) -eq 0 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+if [ "${PGDATABASE,,}" != "" ] && pg_exists && pg_is_empty; then
+    echo "Database is empty. Initializing..."
+    odoo -d $PGDATABASE --stop -i base
+fi
