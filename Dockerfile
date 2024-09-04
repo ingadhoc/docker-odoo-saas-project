@@ -1,16 +1,20 @@
-ARG BASE_IMAGE_REPO
+ARG BASE_IMAGE_REPO=adhoc/odoo
 ARG BASE_IMAGE_TAG
 
 FROM $BASE_IMAGE_REPO:$BASE_IMAGE_TAG
 
+# Posiblemente no se usen
 ARG GITHUB_USER
+# Posiblemente no se usen
 ARG GITHUB_TOKEN
 ARG GITHUB_BOT_TOKEN
-ARG GITLAB_TOKEN
-ARG DOCKER_IMAGE
+# Default = adhoc/odoo-adhoc
+ARG DOCKER_IMAGE=adhoc/odoo-adhoc
 ARG SAAS_PROVIDER_URL
 ARG SAAS_PROVIDER_TOKEN
+# Posiblemente no se usen
 ENV GITHUB_USER="$GITHUB_USER"
+# Posiblemente no se usen
 ENV GITHUB_TOKEN="$GITHUB_TOKEN"
 ENV GITHUB_BOT_TOKEN="$GITHUB_BOT_TOKEN"
 
@@ -47,8 +51,10 @@ RUN $RESOURCES/saas-build
 USER odoo
 
 # Aggregate new repositories of this image
-RUN autoaggregate --config "$RESOURCES/saas-odoo_project_repos.yml" --output $SOURCES/repositories
-RUN autoaggregate --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output $SOURCES/repositories
+RUN autoaggregate --config "$RESOURCES/saas-odoo_project_repos.yml" --output $SOURCES/repositories \
+    && autoaggregate --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output $SOURCES/repositories \
+    # Delete unused git from repositories
+    && find $SOURCES -type d -name ".git" -exec rm -rf {} +
 
 # Report to provider all repos HEADs
 RUN find $SOURCES -name "*.git" -type d -execdir sh -c "pwd && echo , && git log  -n 1  --remotes=origin --pretty=format:\"%H\" && echo \;; " \; | xargs -n3 > /tmp/repo_heads.txt ; curl -X POST $BASE_URL/report_sha$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d` -H "Content-Type: application/json" -H "Accept: application/json" -d "@/tmp/repo_heads.txt"
