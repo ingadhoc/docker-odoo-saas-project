@@ -51,13 +51,13 @@ RUN $RESOURCES/saas-build
 USER odoo
 
 # Aggregate new repositories of this image
-RUN autoaggregate --config "$RESOURCES/saas-odoo_project_repos.yml" --output $SOURCES/repositories \
-    && autoaggregate --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output $SOURCES/repositories \
+RUN git config --global init.defaultBranch main \
+    && autoaggregate --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories" \
+    && autoaggregate --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output "$SOURCES/repositories" \
+    # Report to provider all repos HEADs
+    && find $SOURCES -name "*.git" -type d -execdir sh -c "pwd && echo , && git log  -n 1  --remotes=origin --pretty=format:\"%H\" && echo \;; " \; | xargs -n3 > /tmp/repo_heads.txt ; curl -X POST $BASE_URL/report_sha$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d` -H "Content-Type: application/json" -H "Accept: application/json" -d "@/tmp/repo_heads.txt" \
     # Delete unused git from repositories
     && find $SOURCES -type d -name ".git" -exec rm -rf {} +
-
-# Report to provider all repos HEADs
-RUN find $SOURCES -name "*.git" -type d -execdir sh -c "pwd && echo , && git log  -n 1  --remotes=origin --pretty=format:\"%H\" && echo \;; " \; | xargs -n3 > /tmp/repo_heads.txt ; curl -X POST $BASE_URL/report_sha$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d` -H "Content-Type: application/json" -H "Accept: application/json" -d "@/tmp/repo_heads.txt"
 
 # Install odoo
 RUN pip install --user --no-cache-dir -e $SOURCES/odoo

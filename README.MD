@@ -9,8 +9,7 @@ BASE_IMAGE_TAG=17.0
 ```sh
 export DOCKER_BUILDKIT=1 \
     && docker build --no-cache \
-    -t adhoc/odoo-adhoc:17.3-dev \
-    --build-arg BASE_IMAGE_REPO=adhoc/odoo \
+    -t adhoc/odoo-adhoc:17.0-dev \
     --build-arg BASE_IMAGE_TAG=17.0-dev \
     --build-arg GITHUB_BOT_TOKEN= \
     --build-arg SAAS_PROVIDER_TOKEN= \
@@ -18,4 +17,10 @@ export DOCKER_BUILDKIT=1 \
     --build-arg DOCKER_IMAGE=adhoc/odoo-adhoc \
     -f Dockerfile .
 # docker push adhoc/odoo-adhoc:17.0-dev
+```
+
+Run the image
+
+```sh
+docker run -it --rm --entrypoint="" adhoc/odoo-adhoc:17.0-dev  bash
 ```
