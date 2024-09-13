@@ -8,6 +8,7 @@ from subprocess import check_call
 import logging
 import subprocess
 import tempfile
+import requests
 
 import yaml
 _logger = logging.getLogger(__name__)
@@ -16,6 +17,16 @@ _logger = logging.getLogger(__name__)
 SOURCES = os.environ.get('SOURCES')
 RESOURCES = os.environ.get('RESOURCES')
 REPOS_YAML = os.environ.get('REPOS_YAML')
+
+DATABASE = os.environ.get('DATABASE')
+SAAS_PROVIDER_URL = os.environ.get('SAAS_PROVIDER_URL')
+
+def notifyError(msg:str) -> None:
+    try:
+        requests.post(f"{SAAS_PROVIDER_URL}/saas_database/info_from_client", data={'database' : DATABASE, 'message': f"Error during entrypoint aggregate: {msg}", 'level': 'info'}, headers={ "Content-Type" : "application/json"})
+    except:
+        pass
+
 
 if REPOS_YAML and SOURCES:
     content = REPOS_YAML
@@ -40,8 +51,9 @@ if REPOS_YAML and SOURCES:
             cwd=temp_dir.name,
         )
     except Exception as e:
-        # TODO: Report to saas_provider
-        _logger.error("IMPORTANT! Couldn't run gitaggregate correctly. This is what we get: %s" % e)
+        msg = "IMPORTANT! Couldn't run gitaggregate correctly. This is what we get: %s" % e
+        notifyError(msg)
+        _logger.error(msg)
 
     output = os.path.join(SOURCES, 'repositories')
     with open(repos_file) as yaml_file:
@@ -54,8 +66,9 @@ if REPOS_YAML and SOURCES:
                     if os.path.exists(temp_repo_path) and os.path.isdir(temp_repo_path):
                         rta = subprocess.run(["git", "status"], capture_output=True, text=True, cwd=temp_repo_path)
                         if "Unmerged paths" in rta.stdout:
-                            _logger.warning(f'Conflicts detected on repo {repo}')
-                            # TODO: Report to saas_provider
+                            msg = f'Conflicts detected on repo {repo}'
+                            _logger.warning(msg)
+                            notifyError(msg)
                             continue
 
                         _logger.info(f'Replacing repo {repo}')

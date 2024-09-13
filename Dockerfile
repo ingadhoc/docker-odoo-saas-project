@@ -35,15 +35,17 @@ COPY conf.d/* $RESOURCES/conf.d/
 # Add resources.
 COPY resources/$ODOO_VERSION/* $RESOURCES/
 
-ENV BASE_URL="${SAAS_PROVIDER_URL}/odoo_project"
-ENV URL_SUFIX="?docker_image=${DOCKER_IMAGE}&major_version=${ODOO_VERSION}&token=${SAAS_PROVIDER_TOKEN}"
+ENV SAAS_PROVIDER_URL="$SAAS_PROVIDER_URL"
 
 # get repos from odoo-version-group and odoo-version
-RUN wget -O $RESOURCES/saas-odoo_project_repos.yml $BASE_URL/repos.yml$URL_SUFIX
-RUN wget -O $RESOURCES/saas-odoo_project_version_repos.yml $BASE_URL/repos.yml$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d`
-RUN wget -O $RESOURCES/saas-build $BASE_URL/build$URL_SUFIX && chmod +x $RESOURCES/saas-build
-RUN wget -O $RESOURCES/entrypoint.d/999-saas-entrypoint $BASE_URL/entrypoint$URL_SUFIX && chmod +x $RESOURCES/entrypoint.d/999-saas-entrypoint
-RUN wget -O $RESOURCES/conf.d/999-saas-custom.conf $BASE_URL/custom.conf$URL_SUFIX
+RUN BASE_URL="${SAAS_PROVIDER_URL}/odoo_project" \
+    && URL_SUFIX="?docker_image=${DOCKER_IMAGE}&major_version=${ODOO_VERSION}&token=${SAAS_PROVIDER_TOKEN}" \
+    && wget -O $RESOURCES/saas-odoo_project_repos.yml $BASE_URL/repos.yml$URL_SUFIX \
+    && wget -O $RESOURCES/saas-odoo_project_version_repos.yml $BASE_URL/repos.yml$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d` \
+    && wget -O $RESOURCES/saas-build $BASE_URL/build$URL_SUFIX && chmod +x $RESOURCES/saas-build \
+    && wget -O $RESOURCES/entrypoint.d/999-saas-entrypoint $BASE_URL/entrypoint$URL_SUFIX && chmod +x $RESOURCES/entrypoint.d/999-saas-entrypoint \
+    && wget -O $RESOURCES/conf.d/999-saas-custom.conf $BASE_URL/custom.conf$URL_SUFIX \
+    && unset BASE_URL URL_SUFIX
 
 # Run custom build hook
 USER root
@@ -52,12 +54,15 @@ USER odoo
 
 # Aggregate new repositories of this image
 RUN git config --global init.defaultBranch main \
+    && BASE_URL="${SAAS_PROVIDER_URL}/odoo_project" \
+    && URL_SUFIX="?docker_image=${DOCKER_IMAGE}&major_version=${ODOO_VERSION}&token=${SAAS_PROVIDER_TOKEN}" \
     && autoaggregate --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories" \
     && autoaggregate --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output "$SOURCES/repositories" \
     # Report to provider all repos HEADs
     && find $SOURCES -name "*.git" -type d -execdir sh -c "pwd && echo , && git log  -n 1  --remotes=origin --pretty=format:\"%H\" && echo \;; " \; | xargs -n3 > /tmp/repo_heads.txt ; curl -X POST $BASE_URL/report_sha$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d` -H "Content-Type: application/json" -H "Accept: application/json" -d "@/tmp/repo_heads.txt" \
     # Delete unused git from repositories
-    && find $SOURCES -type d -name ".git" -exec rm -rf {} +
+    && find $SOURCES -type d -name ".git" -exec rm -rf {} + \
+    && unset BASE_URL URL_SUFIX
 
 # Install odoo
 RUN pip install --user --no-cache-dir -e $SOURCES/odoo
