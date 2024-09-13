@@ -6,6 +6,8 @@ import shutil
 from subprocess import check_call
 
 import logging
+import subprocess
+import tempfile
 
 import yaml
 _logger = logging.getLogger(__name__)
@@ -23,14 +25,8 @@ if REPOS_YAML and SOURCES:
 
     _logger.info('Running git aggregator on custom-repos.yml..')
 
-    output = os.path.join(SOURCES, 'repositories')
-    with open(repos_file) as yaml_file:
-        for doc in yaml.safe_load_all(yaml_file):
-            for repo in doc:
-                repo_path = os.path.abspath(os.path.join(output, repo))
-                print(repo_path)
-                if os.path.exists(repo_path) and os.path.isdir(repo_path):
-                    shutil.rmtree(repo_path)
+
+    temp_dir = tempfile.TemporaryDirectory("gitaggregate")
 
     try:
         check_call([
@@ -40,7 +36,30 @@ if REPOS_YAML and SOURCES:
             os.path.abspath(repos_file),
             "--jobs",
             str(cpu_count() or 1),
-            "aggregate",
-        ])
+            "aggregate"],
+            cwd=temp_dir.name,
+        )
     except Exception as e:
+        # TODO: Report to saas_provider
         _logger.error("IMPORTANT! Couldn't run gitaggregate correctly. This is what we get: %s" % e)
+
+    output = os.path.join(SOURCES, 'repositories')
+    with open(repos_file) as yaml_file:
+        for doc in yaml.safe_load_all(yaml_file):
+            for repo in doc:
+                repo_path = os.path.abspath(os.path.join(output, repo))
+                temp_repo_path = os.path.abspath(os.path.join(temp_dir.name, repo))
+                print(repo_path)
+                if os.path.exists(repo_path) and os.path.isdir(repo_path):
+                    if os.path.exists(temp_repo_path) and os.path.isdir(temp_repo_path):
+                        rta = subprocess.run(["git", "status"], capture_output=True, text=True, cwd=temp_repo_path)
+                        if "Unmerged paths" in rta.stdout:
+                            _logger.warning(f'Conflicts detected on repo {repo}')
+                            # TODO: Report to saas_provider
+                            continue
+
+                        _logger.info(f'Replacing repo {repo}')
+                        shutil.rmtree(repo_path)
+                        shutil.move(temp_repo_path, repo_path)
+
+    temp_dir.cleanup()
