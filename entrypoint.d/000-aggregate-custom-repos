@@ -20,10 +20,23 @@ REPOS_YAML = os.environ.get('REPOS_YAML')
 
 DATABASE = os.environ.get('DATABASE')
 SAAS_PROVIDER_URL = os.environ.get('SAAS_PROVIDER_URL')
+SAAS_PROVIDER_TOKEN = os.environ.get('SAAS_PROVIDER_TOKEN')
 
 def notifyError(msg:str) -> None:
     try:
-        requests.post(f"{SAAS_PROVIDER_URL}/saas_database/info_from_client", data={'database' : DATABASE, 'message': f"Error during entrypoint aggregate: {msg}", 'level': 'info'}, headers={ "Content-Type" : "application/json"})
+        requests.post(
+            f"{SAAS_PROVIDER_URL}/saas_database/info_from_client",
+            json={
+                'database' : DATABASE,
+                'message': f"Error during entrypoint aggregate: {msg}",
+                'level': 'info'
+            },
+            headers={
+                "Content-Type" : "application/json",
+                "Saas-Provider-Token": SAAS_PROVIDER_TOKEN
+            },
+            timeout=10
+        )
     except:
         pass
 
@@ -61,7 +74,6 @@ if REPOS_YAML and SOURCES:
             for repo in doc:
                 repo_path = os.path.abspath(os.path.join(output, repo))
                 temp_repo_path = os.path.abspath(os.path.join(temp_dir.name, repo))
-                print(repo_path)
                 if os.path.exists(repo_path) and os.path.isdir(repo_path):
                     if os.path.exists(temp_repo_path) and os.path.isdir(temp_repo_path):
                         rta = subprocess.run(["git", "status"], capture_output=True, text=True, cwd=temp_repo_path)

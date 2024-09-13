@@ -36,6 +36,7 @@ COPY conf.d/* $RESOURCES/conf.d/
 COPY resources/$ODOO_VERSION/* $RESOURCES/
 
 ENV SAAS_PROVIDER_URL="$SAAS_PROVIDER_URL"
+ENV SAAS_PROVIDER_TOKEN="$SAAS_PROVIDER_TOKEN"
 
 # get repos from odoo-version-group and odoo-version
 RUN BASE_URL="${SAAS_PROVIDER_URL}/odoo_project" \
