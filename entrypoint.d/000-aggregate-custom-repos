@@ -49,20 +49,26 @@ if REPOS_YAML and SOURCES:
 
     _logger.info('Running git aggregator on custom-repos.yml..')
 
-
     temp_dir = tempfile.TemporaryDirectory("gitaggregate")
+    repo_dir = os.path.join(temp_dir.name, 'repositories')
+    os.makedirs(repo_dir, exist_ok=True)
 
     try:
-        check_call([
-            "gitaggregate",
-            "--expand-env",
-            "--config",
-            os.path.abspath(repos_file),
-            "--jobs",
-            str(cpu_count() or 1),
-            "aggregate"],
-            cwd=temp_dir.name,
+        check_call(
+            [
+                "gitaggregate",
+                "--expand-env",
+                "--config",
+                os.path.abspath(repos_file),
+                "--jobs",
+                str(cpu_count() or 1),
+                "aggregate"
+            ],
+            # Ensure relative path
+            env=os.environ.copy() | { "SOURCES": ".." },
+            cwd=repo_dir,
         )
+
     except Exception as e:
         msg = "IMPORTANT! Couldn't run gitaggregate correctly. This is what we get: %s" % e
         notifyError(msg)
