@@ -53,6 +53,9 @@ if REPOS_YAML and SOURCES:
     temp_repo_base_path = os.path.join(temp_dir.name, 'repositories')
     os.makedirs(temp_repo_base_path, exist_ok=True)
 
+    env_ctx = os.environ.copy()
+    env_ctx.update({ "SOURCES": ".." })
+
     try:
         check_call(
             [
@@ -65,7 +68,7 @@ if REPOS_YAML and SOURCES:
                 "aggregate"
             ],
             # Ensure relative path
-            env=os.environ.copy() | { "SOURCES": ".." },
+            env=env_ctx,
             cwd=temp_repo_base_path,
         )
 
