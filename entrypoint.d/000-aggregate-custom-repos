@@ -50,8 +50,8 @@ if REPOS_YAML and SOURCES:
     _logger.info('Running git aggregator on custom-repos.yml..')
 
     temp_dir = tempfile.TemporaryDirectory("gitaggregate")
-    repo_dir = os.path.join(temp_dir.name, 'repositories')
-    os.makedirs(repo_dir, exist_ok=True)
+    temp_repo_base_path = os.path.join(temp_dir.name, 'repositories')
+    os.makedirs(temp_repo_base_path, exist_ok=True)
 
     try:
         check_call(
@@ -66,7 +66,7 @@ if REPOS_YAML and SOURCES:
             ],
             # Ensure relative path
             env=os.environ.copy() | { "SOURCES": ".." },
-            cwd=repo_dir,
+            cwd=temp_repo_base_path,
         )
 
     except Exception as e:
@@ -74,23 +74,26 @@ if REPOS_YAML and SOURCES:
         notifyError(msg)
         _logger.error(msg)
 
-    output = os.path.join(SOURCES, 'repositories')
+    final_repo_base_path = os.path.join(SOURCES, 'repositories')
     with open(repos_file) as yaml_file:
         for doc in yaml.safe_load_all(yaml_file):
             for repo in doc:
-                repo_path = os.path.abspath(os.path.join(output, repo))
-                temp_repo_path = os.path.abspath(os.path.join(temp_dir.name, repo))
-                if os.path.exists(repo_path) and os.path.isdir(repo_path):
-                    if os.path.exists(temp_repo_path) and os.path.isdir(temp_repo_path):
-                        rta = subprocess.run(["git", "status"], capture_output=True, text=True, cwd=temp_repo_path)
-                        if "Unmerged paths" in rta.stdout:
-                            msg = f'Conflicts detected on repo {repo}'
-                            _logger.warning(msg)
-                            notifyError(msg)
-                            continue
+                final_current_repo_path = os.path.abspath(os.path.join(final_repo_base_path, repo))
+                temp_current_repo_path = os.path.abspath(os.path.join(temp_repo_base_path, repo))
 
-                        _logger.info(f'Replacing repo {repo}')
-                        shutil.rmtree(repo_path)
-                        shutil.move(temp_repo_path, repo_path)
+                if os.path.exists(final_current_repo_path) and os.path.isdir(final_current_repo_path):
+                    _logger.info(f'Removing old repo {repo}')
+                    shutil.rmtree(final_current_repo_path)
+
+                if os.path.exists(temp_current_repo_path) and os.path.isdir(temp_current_repo_path):
+                    rta = subprocess.run(["git", "status"], capture_output=True, text=True, cwd=temp_current_repo_path)
+                    if "Unmerged paths" in rta.stdout:
+                        msg = f'Conflicts detected on repo {repo}'
+                        _logger.warning(msg)
+                        notifyError(msg)
+                        continue
+
+                    _logger.info(f'Replacing repo {repo}')
+                    shutil.move(temp_current_repo_path, final_current_repo_path)
 
     temp_dir.cleanup()
