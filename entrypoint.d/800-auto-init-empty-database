@@ -29,5 +29,5 @@ function pg_is_empty() {
 
 if [ "${PGDATABASE,,}" != "" ] && pg_exists && pg_is_empty; then
     echo "Database is empty. Initializing..."
-    odoo -d $PGDATABASE --stop -i base
+    $ODOO_SERVER --stop -i saas_client_adhoc --no-http -c $ODOO_RC
 fi
