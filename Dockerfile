@@ -32,9 +32,6 @@ ENV FILESTORE_OPERATIONS_THREADS=3 \
 COPY entrypoint.d/* $RESOURCES/entrypoint.d/
 COPY conf.d/* $RESOURCES/conf.d/
 
-# Add resources.
-COPY resources/$ODOO_VERSION/* $RESOURCES/
-
 ENV SAAS_PROVIDER_URL="$SAAS_PROVIDER_URL"
 ENV SAAS_PROVIDER_TOKEN="$SAAS_PROVIDER_TOKEN"
 
@@ -67,6 +64,3 @@ RUN git config --global init.defaultBranch main \
 
 # Install odoo
 RUN pip install --user --no-cache-dir -e $SOURCES/odoo
-
-# apply patch for environment v2
-RUN $RESOURCES/apply_patch_2_0

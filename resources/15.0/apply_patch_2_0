@@ -1,5 +1,0 @@
-#!/bin/bash
-
-# Patch odoo server.py
-cp -f $RESOURCES/odoo /home/odoo/.local/bin/odoo
-chown odoo.odoo /home/odoo/.local/bin/odoo
