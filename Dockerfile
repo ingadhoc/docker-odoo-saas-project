@@ -52,6 +52,7 @@ USER odoo
 
 # Aggregate new repositories of this image
 RUN git config --global init.defaultBranch main \
+    && git config --global pull.rebase true \
     && BASE_URL="${SAAS_PROVIDER_URL}/odoo_project" \
     && URL_SUFIX="?docker_image=${DOCKER_IMAGE}&major_version=${ODOO_VERSION}&token=${SAAS_PROVIDER_TOKEN}" \
     && autoaggregate --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories" \
