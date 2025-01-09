@@ -1,0 +1,7 @@
+# Common
+build-essential
+# PyCurl
+libcurl4-openssl-dev
+libssl-dev
+# PyCups
+libcups2-dev

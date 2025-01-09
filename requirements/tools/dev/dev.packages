@@ -1,0 +1,13 @@
+ffmpeg
+fonts-liberation2
+gettext-base
+git
+gnupg2
+locales-all
+nano
+npm
+wget
+openssh-client
+telnet
+vim
+sudo

@@ -1,0 +1,13 @@
+{
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-azuretools.vscode-docker",
+                "streetsidesoftware.code-spell-checker",
+                "ms-vsliveshare.vsliveshare",
+                "streetsidesoftware.code-spell-checker-spanish"
+            ]
+        }
+    }
+    
+}

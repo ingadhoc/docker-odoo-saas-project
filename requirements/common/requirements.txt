@@ -1,0 +1,4 @@
+git-aggregator==2.1.0
+ipython==8.7.0
+pdfminer.six==20220319
+phonenumbers==8.13.1

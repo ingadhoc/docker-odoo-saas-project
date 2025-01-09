@@ -1,0 +1,16 @@
+build-essential
+libfreetype6-dev
+libfribidi-dev
+libghc-zlib-dev
+libharfbuzz-dev
+libjpeg-dev
+liblcms2-dev
+libldap2-dev
+libopenjp2-7-dev
+libpq-dev
+libsasl2-dev
+libtiff5-dev
+libwebp-dev
+tcl-dev
+tk-dev
+zlib1g-dev

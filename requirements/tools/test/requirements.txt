@@ -1,0 +1,4 @@
+pysnooper==1.1.1
+ipdb==0.13.9
+# click-odoo-contrib==1.16.1 \ # No longer used. remove?
+pg-activity==3.0.1

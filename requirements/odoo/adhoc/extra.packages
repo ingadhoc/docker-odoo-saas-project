@@ -1,0 +1,3 @@
+# required by pip install git+https sources
+wget
+gnupg2
