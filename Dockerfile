@@ -226,7 +226,11 @@ RUN find $SOURCES -type d -name ".git" -exec rm -rf {} +
 # TODO: See: COPY --exclude (next Dockerfile release)
 FROM os-base-updated AS prod
 COPY --from=aggregate-source-without-git --chown=$ODOO_USER:$ODOO_USER $SOURCES $SOURCES
-RUN pip install --user --no-cache-dir -e $SOURCES/odoo
+RUN <<EOF
+pip install --user --no-cache-dir -e $SOURCES/odoo
+autoaggregate_pip --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories"
+autoaggregate_pip --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output "$SOURCES/repositories"
+EOF
 
 FROM os-base-updated AS dev
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $SOURCES $SOURCES
@@ -243,5 +247,7 @@ RUN --mount=type=bind,src=requirements/tools/dev/dev.packages,dst=/home/odoo/too
     && su - $ODOO_USER -c "pip install --user --no-cache-dir --prefer-binary -r /home/odoo/tools.test.requirements.txt" \
     && su - $ODOO_USER -c "python3 -m compileall -q  /home/odoo/.local/lib/python*/" \
     && su - $ODOO_USER -c "pip install --user --no-cache-dir -e $SOURCES/odoo" \
+    && su - $ODOO_USER -c "autoaggregate_pip --config \"$RESOURCES/saas-odoo_project_repos.yml\" --output \"$SOURCES/repositories\"" \
+    && su - $ODOO_USER -c "autoaggregate_pip --config \"$RESOURCES/saas-odoo_project_version_repos.yml\" --output \"$SOURCES/repositories\"" \
     && chsh -s /bin/false $ODOO_USER
 USER $ODOO_USER
