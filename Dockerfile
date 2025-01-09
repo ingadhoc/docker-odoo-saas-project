@@ -221,19 +221,20 @@ RUN git config --global init.defaultBranch main \
     && unset BASE_URL URL_SUFIX
 
 FROM aggregate-source AS aggregate-source-without-git
-RUN find $SOURCES -type d -name ".git" -exec rm -rf {} +
+RUN find $SOURCES \( -path $SOURCES/openupgradelib -o -path $SOURCES/upgrade-util \) -prune -o -type d -name ".git" -exec rm -rf {} +
 
 # TODO: See: COPY --exclude (next Dockerfile release)
 FROM os-base-updated AS prod
 COPY --from=aggregate-source-without-git --chown=$ODOO_USER:$ODOO_USER $SOURCES $SOURCES
-RUN <<EOF
-pip install --user --no-cache-dir -e $SOURCES/odoo
-autoaggregate_pip --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories"
-autoaggregate_pip --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output "$SOURCES/repositories"
-EOF
+COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml $RESOURCES
+RUN pip install --user --no-cache-dir -e $SOURCES/odoo \
+    && autoaggregate_pip --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories" \
+    && autoaggregate_pip --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output "$SOURCES/repositories" \
+    && rm $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml
 
 FROM os-base-updated AS dev
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $SOURCES $SOURCES
+COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml $RESOURCES
 USER root
 RUN --mount=type=bind,src=requirements/tools/dev/dev.packages,dst=/home/odoo/tools.dev.dev.packages \
     --mount=type=bind,src=requirements/tools/test/test.packages,dst=/home/odoo/tools.test.test.packages \
@@ -249,5 +250,6 @@ RUN --mount=type=bind,src=requirements/tools/dev/dev.packages,dst=/home/odoo/too
     && su - $ODOO_USER -c "pip install --user --no-cache-dir -e $SOURCES/odoo" \
     && su - $ODOO_USER -c "autoaggregate_pip --config \"$RESOURCES/saas-odoo_project_repos.yml\" --output \"$SOURCES/repositories\"" \
     && su - $ODOO_USER -c "autoaggregate_pip --config \"$RESOURCES/saas-odoo_project_version_repos.yml\" --output \"$SOURCES/repositories\"" \
-    && chsh -s /bin/false $ODOO_USER
+    && rm $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml \
+    && chsh -s /bin/false $ODOO_USER 
 USER $ODOO_USER
