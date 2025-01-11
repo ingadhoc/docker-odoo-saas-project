@@ -1,0 +1,131 @@
+name: build
+
+on:
+  workflow_dispatch:
+    inputs:
+      odoo_target:
+        description: "Odoo Version"
+        required: true
+        type: choice
+        options: 
+        - "18.0"
+        default: "18.0"
+
+  repository_dispatch:
+    types:
+      - webhook
+
+concurrency:
+  # Gruop by Odoo Version
+  group: ${{ github.event.inputs.odoo_target || github.event.client_payload.odoo_target }}
+  cancel-in-progress: true
+
+jobs:
+
+  geoip:
+    name: GeoIp
+    runs-on: ubuntu-latest
+    env:
+      MAXMIND_LICENSE_USR: ${{ secrets.MAXMIND_LICENSE_USR }}
+      MAXMIND_LICENSE_KEY: ${{ secrets.MAXMIND_LICENSE_KEY }}
+    outputs:
+      last-modified: ${{ steps.get-last-modified.outputs.last-modified }}
+
+    steps:
+      - name: Check if GeoIP has any update
+        id: get-last-modified
+        run: |  
+          MAXMIND_UPDATE=$(curl -I -sL -u ${MAXMIND_LICENSE_USR}:${MAXMIND_LICENSE_KEY} 'https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz' | grep -i 'Last-Modified')
+          MAXMIND_UPDATE=${MAXMIND_UPDATE#*: }
+          MAXMIND_UPDATE=$(date -d "$MAXMIND_UPDATE" +"%Y%m%d%H%M%S")
+          echo "last-modified=$MAXMIND_UPDATE" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs:
+      - geoip
+    env:
+      ODOO_TARGET: ${{ github.event.inputs.odoo_target || github.event.client_payload.odoo_target }}
+      ODOO_BUILD: 0
+      ODOO_BY_ADHOC_BUILD: 0
+      MAXMIND_GEOIP_UPDATE: ${{ needs.geoip.outputs.last-modified }}
+      # MAXMIND_LICENSE_USR: ${{ secrets.MAXMIND_LICENSE_USR }}
+      # MAXMIND_LICENSE_KEY: ${{ secrets.MAXMIND_LICENSE_KEY }}
+      # GITHUB_BOT_TOKEN: ${{ secrets.BOT_TOKEN_GITHUB }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Get odoo build
+        id: get-odoo-build
+        run: echo "date=$(/bin/date -u "+%Y%m")" >> $GITHUB_OUTPUT
+
+      - name: Get odoo build
+        id: get-odoo-adhoc-build
+        run: echo "date=$(/bin/date -u "+%Y.%m.%d")" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Login to Docker Hub (for pushing the final image)
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Build lower layers
+      # TODO: Upload odoo version.
+      - name: Build dev
+        uses: docker/build-push-action@v6
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: .
+          push: true
+          build-args: |
+            MAXMIND_LICENSE_USER=${{ secrets.MAXMIND_LICENSE_USR }}
+            MAXMIND_LICENSE_KEY=${{ secrets.MAXMIND_LICENSE_KEY }}
+            MAXMIND_UPDATE=${{ env.MAXMIND_UPDATE }}
+            ODOO_VERSION=${{ env.ODOO_TARGET }}
+            ODOO_BUILD=${{ steps.get-odoo-build.outputs.date }}
+            SAAS_PROVIDER_URL=${{ secrets.SAAS_PROVIDER_URL }}
+            SAAS_PROVIDER_TOKEN=${{ secrets.SAAS_PROVIDER_TOKEN }}
+            GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN_GITHUB }}
+            ODOO_BY_ADHOC_BUILD=${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}
+          # Force to recreate this layer (this is no longer needed due the ODOO_BY_ADHOC_BUILD)
+          # no-cache-filters: aggregate-source
+          target: dev
+          tags: |
+            docker.io/adhoc/odoo-adhoc:${{ env.ODOO_TARGET }}.next.${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}.dev
+            docker.io/adhoc/odoo-adhoc:${{ env.ODOO_TARGET }}.next.${{ steps.get-odoo-adhoc-build.outputs.date }}.dev
+            docker.io/adhoc/odoo-adhoc:${{ env.ODOO_TARGET }}.next.dev
+
+      - name: Build prod
+        uses: docker/build-push-action@v6
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: .
+          push: true
+          build-args: |
+            MAXMIND_LICENSE_USER=${{ secrets.MAXMIND_LICENSE_USR }}
+            MAXMIND_LICENSE_KEY=${{ secrets.MAXMIND_LICENSE_KEY }}
+            MAXMIND_UPDATE=${{ env.MAXMIND_UPDATE }}
+            ODOO_VERSION=${{ env.ODOO_TARGET }}
+            ODOO_BUILD=${{ steps.get-odoo-build.outputs.date }}
+            SAAS_PROVIDER_URL=${{ secrets.SAAS_PROVIDER_URL }}
+            SAAS_PROVIDER_TOKEN=${{ secrets.SAAS_PROVIDER_TOKEN }}
+            GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN_GITHUB }}
+            ODOO_BY_ADHOC_BUILD=${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}
+          target: prod
+          tags: |
+            docker.io/adhoc/odoo-adhoc:${{ env.ODOO_TARGET }}.next.${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}
+            docker.io/adhoc/odoo-adhoc:${{ env.ODOO_TARGET }}.next.${{ steps.get-odoo-adhoc-build.outputs.date }}
+            docker.io/adhoc/odoo-adhoc:${{ env.ODOO_TARGET }}.next
+
+
+          
