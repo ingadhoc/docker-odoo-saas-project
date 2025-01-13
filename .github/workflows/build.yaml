@@ -10,6 +10,16 @@ on:
         options: 
         - "18.0"
         default: "18.0"
+      odoo_build_force:
+        description: "Use unique numbers to force to rebuild base image"
+        required: false
+        type: number
+        default: 0
+      odoo_adhoc_build_force:
+        description: "Use unique numbers to force to rebuild oboo by adhoc image"
+        required: false
+        type: number
+        default: 0
 
   repository_dispatch:
     types:
@@ -47,13 +57,9 @@ jobs:
       - geoip
     env:
       ODOO_TARGET: ${{ github.event.inputs.odoo_target || github.event.client_payload.odoo_target }}
-      ODOO_BUILD: 0
-      ODOO_BY_ADHOC_BUILD: 0
+      ODOO_BUILD: ${{ github.event.inputs.odoo_build_force || github.event.client_payload.odoo_build_force || 0 }}
+      ODOO_BY_ADHOC_BUILD: ${{ github.event.inputs.odoo_adhoc_build_force || github.event.client_payload.odoo_adhoc_build_force || 0 }}
       MAXMIND_GEOIP_UPDATE: ${{ needs.geoip.outputs.last-modified }}
-      # MAXMIND_LICENSE_USR: ${{ secrets.MAXMIND_LICENSE_USR }}
-      # MAXMIND_LICENSE_KEY: ${{ secrets.MAXMIND_LICENSE_KEY }}
-      # GITHUB_BOT_TOKEN: ${{ secrets.BOT_TOKEN_GITHUB }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -91,11 +97,11 @@ jobs:
             MAXMIND_LICENSE_KEY=${{ secrets.MAXMIND_LICENSE_KEY }}
             MAXMIND_UPDATE=${{ env.MAXMIND_UPDATE }}
             ODOO_VERSION=${{ env.ODOO_TARGET }}
-            ODOO_BUILD=${{ steps.get-odoo-build.outputs.date }}
+            ODOO_BUILD=${{ steps.get-odoo-build.outputs.date }}.${{ env.ODOO_BUILD }}
             SAAS_PROVIDER_URL=${{ secrets.SAAS_PROVIDER_URL }}
             SAAS_PROVIDER_TOKEN=${{ secrets.SAAS_PROVIDER_TOKEN }}
             GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN_GITHUB }}
-            ODOO_BY_ADHOC_BUILD=${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}
+            ODOO_BY_ADHOC_BUILD=${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}.${{ env.ODOO_BY_ADHOC_BUILD }}
           # Force to recreate this layer (this is no longer needed due the ODOO_BY_ADHOC_BUILD)
           # no-cache-filters: aggregate-source
           target: dev
@@ -120,7 +126,8 @@ jobs:
             SAAS_PROVIDER_URL=${{ secrets.SAAS_PROVIDER_URL }}
             SAAS_PROVIDER_TOKEN=${{ secrets.SAAS_PROVIDER_TOKEN }}
             GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN_GITHUB }}
-            ODOO_BY_ADHOC_BUILD=${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}
+            ODOO_BUILD=${{ steps.get-odoo-build.outputs.date }}.${{ env.ODOO_BUILD }}
+            ODOO_BY_ADHOC_BUILD=${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}.${{ env.ODOO_BY_ADHOC_BUILD }}
           target: prod
           tags: |
             docker.io/adhoc/odoo-adhoc:${{ env.ODOO_TARGET }}.next.${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}
