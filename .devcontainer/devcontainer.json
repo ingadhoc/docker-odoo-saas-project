@@ -5,9 +5,10 @@
                 "ms-azuretools.vscode-docker",
                 "streetsidesoftware.code-spell-checker",
                 "ms-vsliveshare.vsliveshare",
-                "streetsidesoftware.code-spell-checker-spanish"
+                "streetsidesoftware.code-spell-checker-spanish",
+                "shardulm94.trailing-spaces",
+                "GitHub.vscode-github-actions"
             ]
         }
     }
-    
 }
