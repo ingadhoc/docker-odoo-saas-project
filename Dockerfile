@@ -1,9 +1,9 @@
-# GeoIP db from MaxMind (need to be refreshed TODO: refresh ¿on update/daily?)
+# GeoIP db from MaxMind
 FROM debian:12-slim AS geo-ip
-ARG MAXMIND_LICENSE_KEY=default \
-    MAXMIND_LICENSE_USR=1011117 \
-    MAXMIND_UPDATE=default
-RUN mkdir -p /GeoIP \ 
+ARG MAXMIND_UPDATE=default
+RUN --mount=type=secret,id=MAXMIND_LICENSE_KEY,env=MAXMIND_LICENSE_KEY \
+    --mount=type=secret,id=MAXMIND_LICENSE_USR,env=MAXMIND_LICENSE_USR \
+    mkdir -p /GeoIP \
     && cd /GeoIP \
     && apt-get -qq update \
     && apt-get install -yqq --no-install-recommends curl ca-certificates \
@@ -11,7 +11,6 @@ RUN mkdir -p /GeoIP \
     && tar -xzf /GeoIP/GeoLite2-City.tar.gz -C /GeoIP \
     && find /GeoIP/GeoLite2-City_* | grep "GeoLite2-City.mmdb" | xargs -I{} mv {} /GeoIP \
     && rm /GeoIP/GeoLite2-City.tar.gz \
-    && chown -R $ODOO_USER:$ODOO_USER /GeoIP \
     && apt-get purge -yqq curl ca-certificates \
     && rm -Rf /var/lib/apt/lists/* /tmp/*
 
@@ -180,9 +179,7 @@ USER odoo
 ## ---------------------------------------------------------------- SO
 
 FROM os-base AS os-base-updated
-ARG ODOO_BY_ADHOC_MINOR_VERSION="" \
-    ODOO_BY_ADHOC_BUILD=0
-ENV ODOO_BY_ADHOC_MINOR_VERSION="$ODOO_BY_ADHOC_MINOR_VERSION"
+ARG ODOO_BY_ADHOC_BUILD=0
 USER root
 RUN export NEEDRESTART_MODE=a \
     && export DEBIAN_FRONTEND=noninteractive \
@@ -198,10 +195,17 @@ RUN export NEEDRESTART_MODE=a \
 USER $ODOO_USER
 
 FROM os-base-updated AS aggregate-source
+ARG DOCKER_IMAGE="adhoc/odoo-adhoc"
+# TODO: Change this when gitagrregate on entry point is disabled
 ARG SAAS_PROVIDER_TOKEN=default \
     SAAS_PROVIDER_URL="" \
-    DOCKER_IMAGE="adhoc/odoo-adhoc" \
     GITHUB_BOT_TOKEN=""
+ENV SAAS_PROVIDER_TOKEN=$SAAS_PROVIDER_TOKEN \
+    SAAS_PROVIDER_URL=$SAAS_PROVIDER_URL \
+    GITHUB_BOT_TOKEN=$GITHUB_BOT_TOKEN
+    # --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
+    # --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
+    # --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
 RUN git config --global init.defaultBranch main \
     && git config --global pull.rebase true \
     && git config --global user.name "John Doe" \
@@ -227,6 +231,10 @@ RUN find $SOURCES \( -path $SOURCES/openupgradelib -o -path $SOURCES/upgrade-uti
 FROM os-base-updated AS prod
 COPY --from=aggregate-source-without-git --chown=$ODOO_USER:$ODOO_USER $SOURCES $SOURCES
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml $RESOURCES
+# TODO: Change this when gitagrregate on entry point is disabled
+# --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
+# --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
+# --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
 RUN pip install --user --no-cache-dir -e $SOURCES/odoo \
     && autoaggregate_pip --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories" \
     && autoaggregate_pip --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output "$SOURCES/repositories" \
@@ -236,6 +244,10 @@ FROM os-base-updated AS dev
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $SOURCES $SOURCES
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml $RESOURCES
 USER root
+
+# --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
+# --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
+# --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
 RUN --mount=type=bind,src=requirements/tools/dev/dev.packages,dst=/home/odoo/tools.dev.dev.packages \
     --mount=type=bind,src=requirements/tools/test/test.packages,dst=/home/odoo/tools.test.test.packages \
     --mount=type=bind,src=requirements/tools/test/requirements.txt,dst=/home/odoo/tools.test.requirements.txt \
@@ -251,5 +263,5 @@ RUN --mount=type=bind,src=requirements/tools/dev/dev.packages,dst=/home/odoo/too
     && su - $ODOO_USER -c "autoaggregate_pip --config \"$RESOURCES/saas-odoo_project_repos.yml\" --output \"$SOURCES/repositories\"" \
     && su - $ODOO_USER -c "autoaggregate_pip --config \"$RESOURCES/saas-odoo_project_version_repos.yml\" --output \"$SOURCES/repositories\"" \
     && rm $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml \
-    && chsh -s /bin/false $ODOO_USER 
+    && chsh -s /bin/false $ODOO_USER
 USER $ODOO_USER
