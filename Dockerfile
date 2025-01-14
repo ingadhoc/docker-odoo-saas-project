@@ -181,6 +181,13 @@ USER odoo
 FROM os-base AS os-base-updated
 ARG ODOO_BY_ADHOC_BUILD=0
 USER root
+# TODO: Change this when gitagrregate on entry point is disabled
+ARG SAAS_PROVIDER_TOKEN=default \
+    SAAS_PROVIDER_URL="" \
+    GITHUB_BOT_TOKEN=""
+ENV SAAS_PROVIDER_TOKEN=$SAAS_PROVIDER_TOKEN \
+    SAAS_PROVIDER_URL=$SAAS_PROVIDER_URL \
+    GITHUB_BOT_TOKEN=$GITHUB_BOT_TOKEN
 RUN export NEEDRESTART_MODE=a \
     && export DEBIAN_FRONTEND=noninteractive \
     ## Questions that you really, really need to see (or else). ##
@@ -197,12 +204,6 @@ USER $ODOO_USER
 FROM os-base-updated AS aggregate-source
 ARG DOCKER_IMAGE="adhoc/odoo-adhoc"
 # TODO: Change this when gitagrregate on entry point is disabled
-ARG SAAS_PROVIDER_TOKEN=default \
-    SAAS_PROVIDER_URL="" \
-    GITHUB_BOT_TOKEN=""
-ENV SAAS_PROVIDER_TOKEN=$SAAS_PROVIDER_TOKEN \
-    SAAS_PROVIDER_URL=$SAAS_PROVIDER_URL \
-    GITHUB_BOT_TOKEN=$GITHUB_BOT_TOKEN
     # --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     # --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
     # --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
