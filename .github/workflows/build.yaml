@@ -36,20 +36,16 @@ jobs:
   geoip:
     name: GeoIp
     runs-on: ubuntu-latest
-    env:
-      MAXMIND_LICENSE_USR: ${{ secrets.MAXMIND_LICENSE_USR }}
-      MAXMIND_LICENSE_KEY: ${{ secrets.MAXMIND_LICENSE_KEY }}
-    outputs:
-      last-modified: ${{ steps.get-last-modified.outputs.last-modified }}
-
     steps:
       - name: Check if GeoIP has any update
         id: get-last-modified
         run: |
-          MAXMIND_UPDATE=$(curl -I -sL -u ${MAXMIND_LICENSE_USR}:${MAXMIND_LICENSE_KEY} 'https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz' | grep -i 'Last-Modified')
+          MAXMIND_UPDATE=$(curl -I -sL -u ${{ secrets.MAXMIND_LICENSE_USR }}:${{ secrets.MAXMIND_LICENSE_KEY }} 'https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz' | grep -i 'Last-Modified')
           MAXMIND_UPDATE=${MAXMIND_UPDATE#*: }
           MAXMIND_UPDATE=$(date -d "$MAXMIND_UPDATE" +"%Y%m%d%H%M%S")
           echo "last-modified=$MAXMIND_UPDATE" >> $GITHUB_OUTPUT
+    outputs:
+      last-modified: ${{ steps.get-last-modified.outputs.last-modified }}
 
   build:
     name: Build
@@ -61,6 +57,10 @@ jobs:
       ODOO_BUILD: ${{ github.event.inputs.odoo_build_force || github.event.client_payload.odoo_build_force || 0 }}
       ODOO_BY_ADHOC_BUILD: ${{ github.event.inputs.odoo_adhoc_build_force || github.event.client_payload.odoo_adhoc_build_force || 0 }}
       MAXMIND_GEOIP_UPDATE: ${{ needs.geoip.outputs.last-modified }}
+      REGISTRY_NAME: "docker.io"
+      DOCKER_IMAGE: "adhoc/odoo-adhoc"
+      # TODO: "" remove for prod
+      DOCKER_IMAGE_TAG_SUFIX: ".next"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -73,6 +73,19 @@ jobs:
         id: get-odoo-adhoc-build
         run: echo "date=$(/bin/date -u "+%Y.%m.%d")" >> $GITHUB_OUTPUT
 
+      - name: image tags
+        id: image-tags
+        run: |
+          IMAGE_FULL=${{ env.REGISTRY_NAME }}/${{ env.DOCKER_IMAGE }}
+          echo "image=$IMAGE_FULL" >> $GITHUB_OUTPUT
+          MAJOR_TAG="${{ env.ODOO_TARGET }}${{ env.DOCKER_IMAGE_TAG_SUFIX }}"
+          echo "major=$MAJOR_TAG" >> $GITHUB_OUTPUT
+          DAILY_TAG=$MAJOR_TAG.${{ steps.get-odoo-adhoc-build.outputs.date }}
+          echo "daily=$DAILY_TAG" >> $GITHUB_OUTPUT
+          echo "daily=$DAILY_TAG" >> $GITHUB_OUTPUT
+          BUILD_TAG=$DAILY_TAG.${{ github.run_number }}
+          echo "build=$BUILD_TAG" >> $GITHUB_OUTPUT
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -80,7 +93,7 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
-          registry: docker.io
+          registry: ${{ env.REGISTRY_NAME }}
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
@@ -105,13 +118,14 @@ jobs:
             GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN_GITHUB }}
             MAXMIND_UPDATE=${{ env.MAXMIND_UPDATE }}
             ODOO_VERSION=${{ env.ODOO_TARGET }}
+            DOCKER_IMAGE=${{ env.DOCKER_IMAGE }}
             ODOO_BUILD=${{ steps.get-odoo-build.outputs.date }}.${{ env.ODOO_BUILD }}
             ODOO_BY_ADHOC_BUILD=${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}.${{ env.ODOO_BY_ADHOC_BUILD }}
           target: dev
           tags: |
-            docker.io/adhoc/odoo-adhoc:${{ env.ODOO_TARGET }}.next.${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}.dev
-            docker.io/adhoc/odoo-adhoc:${{ env.ODOO_TARGET }}.next.${{ steps.get-odoo-adhoc-build.outputs.date }}.dev
-            docker.io/adhoc/odoo-adhoc:${{ env.ODOO_TARGET }}.next.dev
+            ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.major }}.dev
+            ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.daily }}.dev
+            ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.build }}.dev
 
       - name: Build prod
         uses: docker/build-push-action@v6
@@ -132,10 +146,36 @@ jobs:
             GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN_GITHUB }}
             MAXMIND_UPDATE=${{ env.MAXMIND_UPDATE }}
             ODOO_VERSION=${{ env.ODOO_TARGET }}
+            DOCKER_IMAGE=${{ env.DOCKER_IMAGE }}
             ODOO_BUILD=${{ steps.get-odoo-build.outputs.date }}.${{ env.ODOO_BUILD }}
             ODOO_BY_ADHOC_BUILD=${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}.${{ env.ODOO_BY_ADHOC_BUILD }}
           target: prod
           tags: |
-            docker.io/adhoc/odoo-adhoc:${{ env.ODOO_TARGET }}.next.${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}
-            docker.io/adhoc/odoo-adhoc:${{ env.ODOO_TARGET }}.next.${{ steps.get-odoo-adhoc-build.outputs.date }}
-            docker.io/adhoc/odoo-adhoc:${{ env.ODOO_TARGET }}.next
+            ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.major }}
+            ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.daily }}
+            ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.build }}
+
+    outputs:
+      image-daily-tag: ${{ steps.image-tags.outputs.daily }}
+
+  notify:
+    name: notify that image build is complete
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    env:
+      DOCKER_IMAGE: "adhoc/odoo-adhoc"
+    steps:
+      - name: notify daily build
+        id: notify
+        run: |
+          curl -X POST -H "Content-Type: application/json" "${{ secrets.SAAS_PROVIDER_URL }}/saas_provider/hubhook/${{ secrets.SAAS_PROVIDER_TOKEN  }}" -d '{
+            "callback_url": "not set",
+            "repository": {
+              "repo_name": "'${{ env.DOCKER_IMAGE }}'",
+              "status": "Active"
+            },
+            "push_data": {
+              "tag": "'${{ needs.build.outputs.image-daily-tag }}'"
+            }
+          }'

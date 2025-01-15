@@ -55,5 +55,7 @@ required permissions:
 
 ### ODOO SAAS PROVIDER
 
+Used to report git HEADS during image builds and used for send message from users
+
 SAAS_PROVIDER_TOKEN=
 SAAS_PROVIDER_URL="https://example.com"
