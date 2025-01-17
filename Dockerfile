@@ -28,6 +28,9 @@ ENV FILESTORE_OPERATIONS_THREADS=3 \
     REDIS_DBINDEX=1 \
     REDIS_PASS=False
 
+    # https://odoo-community.org/groups/contributors-15/contributors-186006?mode=thread&date_begin=&date_end=
+ENV OPENBLAS_NUM_THREADS=1
+
 # Add new entrypoints and configs
 COPY entrypoint.d/* $RESOURCES/entrypoint.d/
 COPY conf.d/* $RESOURCES/conf.d/
