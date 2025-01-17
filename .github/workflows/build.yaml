@@ -116,6 +116,7 @@ jobs:
             MAXMIND_UPDATE=${{ env.MAXMIND_UPDATE }}
             ODOO_VERSION=${{ env.ODOO_TARGET }}
             DOCKER_IMAGE=${{ env.DOCKER_IMAGE }}
+            ODOO_MINOR_VERSION=${{ steps.get-odoo-build.outputs.date }}
             ODOO_BUILD=${{ steps.get-odoo-build.outputs.date }}.${{ env.ODOO_BUILD }}
             ODOO_BY_ADHOC_BUILD=${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}.${{ env.ODOO_BY_ADHOC_BUILD }}
           target: dev
@@ -141,6 +142,7 @@ jobs:
             MAXMIND_UPDATE=${{ env.MAXMIND_UPDATE }}
             ODOO_VERSION=${{ env.ODOO_TARGET }}
             DOCKER_IMAGE=${{ env.DOCKER_IMAGE }}
+            ODOO_MINOR_VERSION=${{ steps.get-odoo-build.outputs.date }}
             ODOO_BUILD=${{ steps.get-odoo-build.outputs.date }}.${{ env.ODOO_BUILD }}
             ODOO_BY_ADHOC_BUILD=${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}.${{ env.ODOO_BY_ADHOC_BUILD }}
           target: prod

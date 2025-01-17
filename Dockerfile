@@ -196,8 +196,8 @@ RUN export NEEDRESTART_MODE=a \
 USER $ODOO_USER
 
 FROM os-base-updated AS aggregate-source
-ARG DOCKER_IMAGE="adhoc/odoo-adhoc"
-
+ARG DOCKER_IMAGE="adhoc/odoo-adhoc" \
+    ODOO_MINOR_VERSION=""
 RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
     --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
@@ -209,7 +209,7 @@ RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     && URL_SUFIX="?docker_image=${DOCKER_IMAGE}&major_version=${ODOO_VERSION}&token=${SAAS_PROVIDER_TOKEN}" \
     # Get remote config from odoo-provider (odoo_project)
     && curl -L -sS -o $RESOURCES/saas-odoo_project_repos.yml "$BASE_URL/repos.yml$URL_SUFIX" \
-    && curl -L -sS -o $RESOURCES/saas-odoo_project_version_repos.yml "$BASE_URL/repos.yml$URL_SUFIX&minor_version=`date -u +%Y.%m.%d`" \
+    && curl -L -sS -o $RESOURCES/saas-odoo_project_version_repos.yml "$BASE_URL/repos.yml$URL_SUFIX&minor_version=${ODOO_MINOR_VERSION}" \
     && curl -L -sS -o $RESOURCES/saas-build "$BASE_URL/build$URL_SUFIX" && chmod +x $RESOURCES/saas-build \
     && curl -L -sS -o $RESOURCES/entrypoint.d/999-saas-entrypoint "$BASE_URL/entrypoint$URL_SUFIX" && chmod +x $RESOURCES/entrypoint.d/999-saas-entrypoint \
     && curl -L -sS -o $RESOURCES/conf.d/999-saas-custom.conf "$BASE_URL/custom.conf$URL_SUFIX" \
