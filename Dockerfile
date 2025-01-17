@@ -181,13 +181,6 @@ USER odoo
 FROM os-base AS os-base-updated
 ARG ODOO_BY_ADHOC_BUILD=0
 USER root
-# TODO: Change this when gitagrregate on entry point is disabled
-ARG SAAS_PROVIDER_TOKEN=default \
-    SAAS_PROVIDER_URL="" \
-    GITHUB_BOT_TOKEN=""
-ENV SAAS_PROVIDER_TOKEN=$SAAS_PROVIDER_TOKEN \
-    SAAS_PROVIDER_URL=$SAAS_PROVIDER_URL \
-    GITHUB_BOT_TOKEN=$GITHUB_BOT_TOKEN
 RUN export NEEDRESTART_MODE=a \
     && export DEBIAN_FRONTEND=noninteractive \
     ## Questions that you really, really need to see (or else). ##
@@ -198,16 +191,17 @@ RUN export NEEDRESTART_MODE=a \
     && apt-get -qqy -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" dist-upgrade \
     && apt-get -qqy autoremove \
     && apt-get -qqy clean \
-    && rm -Rf /var/lib/apt/lists/* /tmp/*
+    && rm -Rf /var/lib/apt/lists/* /tmp/* \
+    && echo "$ODOO_BY_ADHOC_BUILD" > ODOO_BY_ADHOC_BUILD
 USER $ODOO_USER
 
 FROM os-base-updated AS aggregate-source
 ARG DOCKER_IMAGE="adhoc/odoo-adhoc"
-# TODO: Change this when gitagrregate on entry point is disabled
-    # --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
-    # --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
-    # --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
-RUN git config --global init.defaultBranch main \
+
+RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
+    --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
+    --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
+    git config --global init.defaultBranch main \
     && git config --global pull.rebase true \
     && git config --global user.name "John Doe" \
     && git config --global user.email johndoe@example.com \
@@ -215,7 +209,7 @@ RUN git config --global init.defaultBranch main \
     && URL_SUFIX="?docker_image=${DOCKER_IMAGE}&major_version=${ODOO_VERSION}&token=${SAAS_PROVIDER_TOKEN}" \
     # Get remote config from odoo-provider (odoo_project)
     && curl -L -sS -o $RESOURCES/saas-odoo_project_repos.yml "$BASE_URL/repos.yml$URL_SUFIX" \
-    && curl -L -sS -o $RESOURCES/saas-odoo_project_version_repos.yml "$BASE_URL/repos.yml$URL_SUFIX&minor_version=$ODOO_BY_ADHOC_MINOR_VERSION" \
+    && curl -L -sS -o $RESOURCES/saas-odoo_project_version_repos.yml "$BASE_URL/repos.yml$URL_SUFIX&minor_version=`date -u +%Y.%m.%d`" \
     && curl -L -sS -o $RESOURCES/saas-build "$BASE_URL/build$URL_SUFIX" && chmod +x $RESOURCES/saas-build \
     && curl -L -sS -o $RESOURCES/entrypoint.d/999-saas-entrypoint "$BASE_URL/entrypoint$URL_SUFIX" && chmod +x $RESOURCES/entrypoint.d/999-saas-entrypoint \
     && curl -L -sS -o $RESOURCES/conf.d/999-saas-custom.conf "$BASE_URL/custom.conf$URL_SUFIX" \
@@ -232,11 +226,11 @@ RUN find $SOURCES \( -path $SOURCES/openupgradelib -o -path $SOURCES/upgrade-uti
 FROM os-base-updated AS prod
 COPY --from=aggregate-source-without-git --chown=$ODOO_USER:$ODOO_USER $SOURCES $SOURCES
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml $RESOURCES
-# TODO: Change this when gitagrregate on entry point is disabled
-# --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
-# --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
-# --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
-RUN pip install --user --no-cache-dir -e $SOURCES/odoo \
+
+RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
+    --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
+    --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
+    pip install --user --no-cache-dir -e $SOURCES/odoo \
     && autoaggregate_pip --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories" \
     && autoaggregate_pip --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output "$SOURCES/repositories" \
     && rm $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml
@@ -246,12 +240,12 @@ COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $SOURCES $SOURCES
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml $RESOURCES
 USER root
 
-# --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
-# --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
-# --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
 RUN --mount=type=bind,src=requirements/tools/dev/dev.packages,dst=/home/odoo/tools.dev.dev.packages \
     --mount=type=bind,src=requirements/tools/test/test.packages,dst=/home/odoo/tools.test.test.packages \
     --mount=type=bind,src=requirements/tools/test/requirements.txt,dst=/home/odoo/tools.test.requirements.txt \
+    --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
+    --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
+    --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
     apt-get -qq update \
     # Dev Tools ( Used by developers )
     && grep -v '^#' /home/odoo/tools.dev.dev.packages | xargs apt-get install -yqq --no-install-recommends \

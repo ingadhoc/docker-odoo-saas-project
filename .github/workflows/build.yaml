@@ -109,13 +109,10 @@ jobs:
           secrets: |
             MAXMIND_LICENSE_USR=${{ secrets.MAXMIND_LICENSE_USR }}
             MAXMIND_LICENSE_KEY=${{ secrets.MAXMIND_LICENSE_KEY }}
-          #   SAAS_PROVIDER_URL=${{ secrets.SAAS_PROVIDER_URL }}
-          #   SAAS_PROVIDER_TOKEN=${{ secrets.SAAS_PROVIDER_TOKEN }}
-          #   GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN_GITHUB }}
-          build-args: |
             SAAS_PROVIDER_URL=${{ secrets.SAAS_PROVIDER_URL }}
             SAAS_PROVIDER_TOKEN=${{ secrets.SAAS_PROVIDER_TOKEN }}
             GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN_GITHUB }}
+          build-args: |
             MAXMIND_UPDATE=${{ env.MAXMIND_UPDATE }}
             ODOO_VERSION=${{ env.ODOO_TARGET }}
             DOCKER_IMAGE=${{ env.DOCKER_IMAGE }}
@@ -137,13 +134,10 @@ jobs:
           secrets: |
             MAXMIND_LICENSE_USR=${{ secrets.MAXMIND_LICENSE_USR }}
             MAXMIND_LICENSE_KEY=${{ secrets.MAXMIND_LICENSE_KEY }}
-          #   SAAS_PROVIDER_URL=${{ secrets.SAAS_PROVIDER_URL }}
-          #   SAAS_PROVIDER_TOKEN=${{ secrets.SAAS_PROVIDER_TOKEN }}
-          #   GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN_GITHUB }}
-          build-args: |
             SAAS_PROVIDER_URL=${{ secrets.SAAS_PROVIDER_URL }}
             SAAS_PROVIDER_TOKEN=${{ secrets.SAAS_PROVIDER_TOKEN }}
             GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN_GITHUB }}
+          build-args: |
             MAXMIND_UPDATE=${{ env.MAXMIND_UPDATE }}
             ODOO_VERSION=${{ env.ODOO_TARGET }}
             DOCKER_IMAGE=${{ env.DOCKER_IMAGE }}
