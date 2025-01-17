@@ -62,7 +62,9 @@ ENV ODOO_SERVER=odoo \
     PGPASSWORD=odoo \
     PGHOST=db \
     PGPORT=5432 \
-    ADMIN_PASSWORD=admin
+    ADMIN_PASSWORD=admin \
+    # https://odoo-community.org/groups/contributors-15/contributors-186006?mode=thread&date_begin=&date_end=
+    OPENBLAS_NUM_THREADS=1
 ENV PATH=$PATH:/home/odoo/.local/bin
 
 EXPOSE 8069 8072
