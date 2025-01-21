@@ -97,32 +97,6 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build base
-        uses: docker/build-push-action@v6
-        with:
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          context: .
-          push: true
-          secrets: |
-            MAXMIND_LICENSE_USR=${{ secrets.MAXMIND_LICENSE_USR }}
-            MAXMIND_LICENSE_KEY=${{ secrets.MAXMIND_LICENSE_KEY }}
-            SAAS_PROVIDER_URL=${{ secrets.SAAS_PROVIDER_URL }}
-            SAAS_PROVIDER_TOKEN=${{ secrets.SAAS_PROVIDER_TOKEN }}
-            GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN_GITHUB }}
-          build-args: |
-            MAXMIND_UPDATE=${{ env.MAXMIND_UPDATE }}
-            ODOO_VERSION=${{ env.ODOO_TARGET }}
-            DOCKER_IMAGE=${{ env.DOCKER_IMAGE }}
-            ODOO_MINOR_VERSION=${{ steps.get-odoo-adhoc-build.outputs.date }}
-            ODOO_BUILD=${{ steps.get-odoo-build.outputs.date }}.${{ env.ODOO_BUILD }}
-            ODOO_BY_ADHOC_BUILD=${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}.${{ env.ODOO_BY_ADHOC_BUILD }}
-          target: os-base
-          tags: |
-            ${{ env.REGISTRY_NAME }}/adhoc/odoo:${{ steps.image-tags.outputs.major }}
-
-      # Build lower layers
-      # TODO: Upload odoo version.
       - name: Build dev
         uses: docker/build-push-action@v6
         with:
