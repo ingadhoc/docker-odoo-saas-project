@@ -1,5 +1,5 @@
 # GeoIP db from MaxMind
-FROM debian:12-slim AS geo-ip
+FROM debian:12-slim@sha256:d365f4920711a9074c4bcd178e8f457ee59250426441ab2a5f8106ed8fe948eb AS geo-ip
 ARG MAXMIND_UPDATE=default
 RUN --mount=type=secret,id=MAXMIND_LICENSE_KEY,env=MAXMIND_LICENSE_KEY \
     --mount=type=secret,id=MAXMIND_LICENSE_USR,env=MAXMIND_LICENSE_USR \
@@ -70,9 +70,9 @@ ENV PATH=$PATH:/home/odoo/.local/bin
 EXPOSE 8069 8072
 
 # TODO: See COPY --parents (next Dockerfile release)
-COPY --chown=$ODOO_UID:$ODOO_GID .bash_aliases /tmp/.bash_aliases
-COPY --chown=$ODOO_UID:$ODOO_GID ./bin/ /tmp/bin
-COPY --chown=$ODOO_UID:$ODOO_GID ./resources/ /tmp/resources
+COPY --chown=$ODOO_UID:$ODOO_GID ./$ODOO_VERSION/.bash_aliases /tmp/.bash_aliases
+COPY --chown=$ODOO_UID:$ODOO_GID ./$ODOO_VERSION/bin/ /tmp/bin
+COPY --chown=$ODOO_UID:$ODOO_GID ./$ODOO_VERSION/resources/ /tmp/resources
 # COPY UNRAR libs
 COPY --from=unrar --chown=root:root --chmod=755 /usr/lib/libunrar.* /usr/lib/
 # Enable Odoo user and filestore
@@ -110,8 +110,8 @@ RUN groupadd --gid $ODOO_GID $ODOO_GROUP \
     && rm -Rf wkhtmltox.deb libjpeg-turbo8.deb /var/lib/apt/lists/* /tmp/*
 
 # Common
-RUN --mount=type=bind,src=requirements/common/common.packages,dst=/common.packages \
-    --mount=type=bind,src=requirements/common/requirements.txt,dst=/home/odoo/common.requirements.txt \
+RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/common/common.packages,dst=/common.packages \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/common/requirements.txt,dst=/home/odoo/common.requirements.txt \
     apt-get -qq update \
     && echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
     && grep -v '^#' /common.packages | xargs apt-get install -yqq --no-install-recommends \
@@ -125,7 +125,7 @@ RUN --mount=type=bind,src=requirements/common/common.packages,dst=/common.packag
 
 # Install Odoo hard & soft dependencies
 ADD --chown=$ODOO_USER:$ODOO_USER https://raw.githubusercontent.com/$ODOO_SOURCE/$ODOO_VERSION/requirements.txt /odoo.requirements.txt
-RUN --mount=type=bind,src=requirements/odoo/base/build.packages,dst=/odoo.build.packages \
+RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/base/build.packages,dst=/odoo.build.packages \
     apt-get -qq update \
     && grep -v '^#' /odoo.build.packages | xargs apt-get install -yqq --no-install-recommends \
     # Issue: https://github.com/odoo/odoo/issues/187021
@@ -142,9 +142,9 @@ RUN --mount=type=bind,src=requirements/odoo/base/build.packages,dst=/odoo.build.
     && rm -Rf /var/lib/apt/lists/* /tmp/*
 
 # Odoo by Adhoc requirements
-RUN --mount=type=bind,src=requirements/odoo/adhoc/requirements.txt,dst=/home/odoo/odoo.adhoc.requirements.txt \
-    --mount=type=bind,src=requirements/odoo/adhoc/build.packages,dst=/home/odoo/odoo.adhoc.build.packages \
-    --mount=type=bind,src=requirements/odoo/adhoc/extra.packages,dst=/home/odoo/odoo.adhoc.extra.packages \
+RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/requirements.txt,dst=/home/odoo/odoo.adhoc.requirements.txt \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/build.packages,dst=/home/odoo/odoo.adhoc.build.packages \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/extra.packages,dst=/home/odoo/odoo.adhoc.extra.packages \
     apt-get -qq update \
     && grep -v '^#' /home/odoo/odoo.adhoc.extra.packages | xargs apt-get install -yqq --no-install-recommends \
     && grep -v '^#' /home/odoo/odoo.adhoc.build.packages | xargs apt-get install -yqq --no-install-recommends \
@@ -243,9 +243,9 @@ COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $SOURCES $SOURCES
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml $RESOURCES
 USER root
 
-RUN --mount=type=bind,src=requirements/tools/dev/dev.packages,dst=/home/odoo/tools.dev.dev.packages \
-    --mount=type=bind,src=requirements/tools/test/test.packages,dst=/home/odoo/tools.test.test.packages \
-    --mount=type=bind,src=requirements/tools/test/requirements.txt,dst=/home/odoo/tools.test.requirements.txt \
+RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/dev.packages,dst=/home/odoo/tools.dev.dev.packages \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/test/test.packages,dst=/home/odoo/tools.test.test.packages \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/test/requirements.txt,dst=/home/odoo/tools.test.requirements.txt \
     --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
     --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
