@@ -34,7 +34,7 @@ RUN apt-get -qq update \
 ##### END AUX IMAGES
 
 # ODOO COMMON IMAGE
-FROM python:3.10-slim-bookworm AS os-base
+FROM python:3.12-slim-bookworm AS os-base
 ARG ODOO_VERSION=18.0 \
     ODOO_SOURCE=odoo/odoo \
     ODOO_BUILD=0
