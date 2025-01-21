@@ -128,10 +128,6 @@ ADD --chown=$ODOO_USER:$ODOO_USER https://raw.githubusercontent.com/$ODOO_SOURCE
 RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/base/build.packages,dst=/odoo.build.packages \
     apt-get -qq update \
     && grep -v '^#' /odoo.build.packages | xargs apt-get install -yqq --no-install-recommends \
-    # Issue: https://github.com/odoo/odoo/issues/187021
-    && sed -i "s/gevent==21\.8\.0 ; sys_platform != 'win32' and python_version == '3\.10'  # (Jammy)/gevent==21.12.0 ; sys_platform != 'win32' and python_version == '3.10'  # (Jammy)/" odoo.requirements.txt \
-    && sed -i "s/geoip2==2\.9\.0/geoip2==4.6.0/" odoo.requirements.txt \
-    # End Issue
     && chsh -s /bin/bash $ODOO_USER \
     && su - $ODOO_USER -c "pip install --user --no-cache-dir --prefer-binary -r /odoo.requirements.txt" \
     && su - $ODOO_USER -c "python3 -m compileall -q  /home/odoo/.local/lib/python*/" \

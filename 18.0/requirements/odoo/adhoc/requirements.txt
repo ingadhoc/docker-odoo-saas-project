@@ -8,7 +8,7 @@ PyGithub==1.57
 git-aggregator==2.1.0
 # TODO revisar si sigue siendo necesario
 firebase-admin==6.0.1
-transifex-python==3.0.3
+transifex-python
 dnspython3==1.15.0
 google-cloud-storage==2.6.0
 git+https://github.com/rancher/client-python.git@master
