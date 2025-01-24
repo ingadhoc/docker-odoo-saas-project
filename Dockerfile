@@ -43,12 +43,13 @@ ENV ODOO_VERSION="$ODOO_VERSION" \
     ODOO_USER=odoo \
     ODOO_GROUP=odoo \
     ODOO_UID=1000 \
-    ODOO_GID=1000
-ENV SOURCES=/home/odoo/src \
-    CUSTOM=/home/odoo/custom \
-    RESOURCES=/home/odoo/.resources \
-    CONFIG_DIR=/home/odoo/.config \
-    DATA_DIR=/home/odoo/data
+    ODOO_GID=1000 \
+    ODOO_HOME=/home/odoo
+ENV SOURCES=$ODOO_HOME/src \
+    CUSTOM=$ODOO_HOME/custom \
+    RESOURCES=$ODOO_HOME/.resources \
+    CONFIG_DIR=$ODOO_HOME/.config \
+    DATA_DIR=$ODOO_HOME/data
 ENV OPENERP_SERVER=$CONFIG_DIR/odoo.conf
 ENV ODOO_RC=$OPENERP_SERVER
 
@@ -65,8 +66,7 @@ ENV ODOO_SERVER=odoo \
     ADMIN_PASSWORD=admin \
     # https://odoo-community.org/groups/contributors-15/contributors-186006?mode=thread&date_begin=&date_end=
     OPENBLAS_NUM_THREADS=1
-ENV PATH=$PATH:/home/odoo/.local/bin
-
+ENV PATH=$ODOO_HOME/venv/bin:$PATH:$ODOO_HOME/.local/bin
 EXPOSE 8069 8072
 
 # TODO: See COPY --parents (next Dockerfile release)
@@ -77,20 +77,20 @@ COPY --chown=$ODOO_UID:$ODOO_GID ./$ODOO_VERSION/resources/ /tmp/resources
 COPY --from=unrar --chown=root:root --chmod=755 /usr/lib/libunrar.* /usr/lib/
 # Enable Odoo user and filestore
 RUN groupadd --gid $ODOO_GID $ODOO_GROUP \
-    && useradd -u $ODOO_UID -md /home/odoo $ODOO_USER -g $ODOO_GROUP -s /bin/false \
+    && useradd -u $ODOO_UID -md $ODOO_HOME $ODOO_USER -g $ODOO_GROUP -s /bin/false \
     && chsh -s /bin/bash $ODOO_USER \
-    && su - $ODOO_USER -c "\
+    && su $ODOO_USER -c "\
         mkdir -p $RESOURCES \
         && mkdir -p $SOURCES/repositories \
         && mkdir -p $CUSTOM/repositories \
         && mkdir -p $DATA_DIR \
         && mkdir -p $CONFIG_DIR \
-        && mkdir -p /home/odoo/.local/bin/ \
-        && mv /tmp/.bash_aliases /home/odoo/.bash_aliases \
-        && mv /tmp/bin/* /home/odoo/.local/bin/ \
+        && mkdir -p $ODOO_HOME/.local/bin/ \
+        && mv /tmp/.bash_aliases $ODOO_HOME/.bash_aliases \
+        && mv /tmp/bin/* $ODOO_HOME/.local/bin/ \
         && mv /tmp/resources/* $RESOURCES/ \
-        && ln /home/odoo/.local/bin/direxec $RESOURCES/entrypoint \
-        && ln /home/odoo/.local/bin/direxec $RESOURCES/build \
+        && ln $ODOO_HOME/.local/bin/direxec $RESOURCES/entrypoint \
+        && ln $ODOO_HOME/.local/bin/direxec $RESOURCES/build \
     " \
     && rm -rf /tmp/* \
     && chsh -s /bin/false $ODOO_USER \
@@ -111,14 +111,18 @@ RUN groupadd --gid $ODOO_GID $ODOO_GROUP \
 
 # Common
 RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/common/common.packages,dst=/common.packages \
-    --mount=type=bind,src=./$ODOO_VERSION/requirements/common/requirements.txt,dst=/home/odoo/common.requirements.txt \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/common/requirements.txt,dst=/common.requirements.txt \
     apt-get -qq update \
     && echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
     && grep -v '^#' /common.packages | xargs apt-get install -yqq --no-install-recommends \
     && chsh -s /bin/bash $ODOO_USER \
-    && su - $ODOO_USER -c "pip install --user --upgrade pip" \
-    && su - $ODOO_USER -c "pip install --user --no-cache-dir --prefer-binary -r /home/odoo/common.requirements.txt" \
-    && su - $ODOO_USER -c "python3 -m compileall -q  /home/odoo/.local/lib/python*/" \
+    # Create venv for odoo
+    && su $ODOO_USER -c "python -m venv $ODOO_HOME/venv" \
+    # Upgrade pip (user level)
+    && su $ODOO_USER -c  "pip install --upgrade pip" \
+    # Sice this point we are using the venv (pip and python command refer to the venv)
+    && su $ODOO_USER -c  "pip install --no-cache-dir --prefer-binary -r /common.requirements.txt \
+        && python -m compileall -q $ODOO_HOME/venv/lib/python*/" \
     && chsh -s /bin/false $ODOO_USER \
     && apt-get autopurge -yqq \
     && rm -Rf /var/lib/apt/lists/* /tmp/*
@@ -129,8 +133,8 @@ RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/base/build.packages,
     apt-get -qq update \
     && grep -v '^#' /odoo.build.packages | xargs apt-get install -yqq --no-install-recommends \
     && chsh -s /bin/bash $ODOO_USER \
-    && su - $ODOO_USER -c "pip install --user --no-cache-dir --prefer-binary -r /odoo.requirements.txt" \
-    && su - $ODOO_USER -c "python3 -m compileall -q  /home/odoo/.local/lib/python*/" \
+    && su $ODOO_USER -c "pip install --no-cache-dir --prefer-binary -r /odoo.requirements.txt \
+        && python -m compileall -q $ODOO_HOME/venv/lib/python*/" \
     && chsh -s /bin/false $ODOO_USER \
     && rm /odoo.requirements.txt \
     && grep -v '^#' /odoo.build.packages | xargs apt-get purge -yqq \
@@ -138,16 +142,16 @@ RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/base/build.packages,
     && rm -Rf /var/lib/apt/lists/* /tmp/*
 
 # Odoo by Adhoc requirements
-RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/requirements.txt,dst=/home/odoo/odoo.adhoc.requirements.txt \
-    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/build.packages,dst=/home/odoo/odoo.adhoc.build.packages \
-    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/extra.packages,dst=/home/odoo/odoo.adhoc.extra.packages \
+RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/requirements.txt,dst=/odoo.adhoc.requirements.txt \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/build.packages,dst=/odoo.adhoc.build.packages \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/extra.packages,dst=/odoo.adhoc.extra.packages \
     apt-get -qq update \
-    && grep -v '^#' /home/odoo/odoo.adhoc.extra.packages | xargs apt-get install -yqq --no-install-recommends \
-    && grep -v '^#' /home/odoo/odoo.adhoc.build.packages | xargs apt-get install -yqq --no-install-recommends \
+    && grep -v '^#' /odoo.adhoc.extra.packages | xargs apt-get install -yqq --no-install-recommends \
+    && grep -v '^#' /odoo.adhoc.build.packages | xargs apt-get install -yqq --no-install-recommends \
     # Enabling shell for odoo user
     && chsh -s /bin/bash $ODOO_USER \
-    && su - $ODOO_USER -c "pip install --user --no-cache-dir --prefer-binary -r /home/odoo/odoo.adhoc.requirements.txt" \
-    && su - $ODOO_USER -c "python3 -m compileall -q  /home/odoo/.local/lib/python*/" \
+    && su $ODOO_USER -c "pip install --no-cache-dir --prefer-binary -r /odoo.adhoc.requirements.txt \
+        && python -m compileall -q $ODOO_HOME/venv/lib/python*/" \
     # Disabling shell for odoo user
     && chsh -s /bin/false $ODOO_USER \
     # PG Client
@@ -158,7 +162,7 @@ RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/requirements.t
     && apt-get -qq update \
     && apt-get install -yqq --no-install-recommends postgresql-client-15 \
     # Clean up
-    && grep -v '^#' /home/odoo/odoo.adhoc.build.packages | xargs apt-get purge -yqq \
+    && grep -v '^#' /odoo.adhoc.build.packages | xargs apt-get purge -yqq \
     && apt-get -yqq autoremove \
     && rm -Rf /var/lib/apt/lists/* /tmp/*
 
@@ -212,10 +216,14 @@ RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     && curl -L -sS -o $RESOURCES/saas-build "$BASE_URL/build$URL_SUFIX" && chmod +x $RESOURCES/saas-build \
     && curl -L -sS -o $RESOURCES/entrypoint.d/999-saas-entrypoint "$BASE_URL/entrypoint$URL_SUFIX" && chmod +x $RESOURCES/entrypoint.d/999-saas-entrypoint \
     && curl -L -sS -o $RESOURCES/conf.d/999-saas-custom.conf "$BASE_URL/custom.conf$URL_SUFIX" \
-    # Aggregate new repositories of this image
+    # Aggregate new repositories of this image # TODO: NO PERMITIR INSTALACIONES DE LOS REPOSITORIOS
     && autoaggregate --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories" \
     && autoaggregate --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output "$SOURCES/repositories" \
-    && find $SOURCES -name "*.git" -type d -execdir sh -c "pwd && echo , && git log  -n 1  --remotes=origin --pretty=format:\"%H\" && echo \;; " \; | xargs -n3 > /tmp/repo_heads.txt ; curl -X POST $BASE_URL/report_sha$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d` -H "Content-Type: application/json" -H "Accept: application/json" -d "@/tmp/repo_heads.txt" \
+    # ini - upgrade-util install issue
+    && cd $SOURCES/upgrade-util; rm -rf src/mail src/base/; mv -f src/* ../odoo/odoo/upgrade \
+    # end - upgrade-util install issue
+    && find $SOURCES -name "*.git" -type d -execdir sh -c "pwd && echo , && git log  -n 1  --remotes=origin --pretty=format:\"%H\" && echo \;; " \; | xargs -n3 > $ODOO_HOME/repo_heads.txt \
+    && curl -X POST $BASE_URL/report_sha$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d` -H "Content-Type: application/json" -H "Accept: application/json" -d "@$ODOO_HOME/repo_heads.txt" \
     && unset BASE_URL URL_SUFIX
 
 FROM aggregate-source AS aggregate-source-without-git
@@ -229,33 +237,39 @@ COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_
 RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
     --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
-    pip install --user --no-cache-dir -e $SOURCES/odoo \
-    && autoaggregate_pip --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories" \
+    autoaggregate_pip --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories" \
     && autoaggregate_pip --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output "$SOURCES/repositories" \
-    && rm $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml
+    && rm $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml \
+    # ini - upgrade-util install issue
+    && pip uninstall -y odoo_upgrade && rm -rf $ODOO_HOME/venv/lib/python*/site-packages/odoo \
+    # end - upgrade-util install issue
+    && pip install --no-cache-dir -e $SOURCES/odoo
 
 FROM os-base-updated AS dev
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $SOURCES $SOURCES
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml $RESOURCES
 USER root
 
-RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/dev.packages,dst=/home/odoo/tools.dev.dev.packages \
-    --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/test/test.packages,dst=/home/odoo/tools.test.test.packages \
-    --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/test/requirements.txt,dst=/home/odoo/tools.test.requirements.txt \
+RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/dev.packages,dst=/tools.dev.dev.packages \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/test/test.packages,dst=/tools.test.test.packages \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/test/requirements.txt,dst=/tools.test.requirements.txt \
     --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
     --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
     apt-get -qq update \
     # Dev Tools ( Used by developers )
-    && grep -v '^#' /home/odoo/tools.dev.dev.packages | xargs apt-get install -yqq --no-install-recommends \
+    && grep -v '^#' /tools.dev.dev.packages | xargs apt-get install -yqq --no-install-recommends \
     # Test Tools ( Used by runbot )
-    && grep -v '^#' /home/odoo/tools.test.test.packages | xargs apt-get install -yqq --no-install-recommends \
+    && grep -v '^#' /tools.test.test.packages | xargs apt-get install -yqq --no-install-recommends \
     && chsh -s /bin/bash $ODOO_USER \
-    && su - $ODOO_USER -c "pip install --user --no-cache-dir --prefer-binary -r /home/odoo/tools.test.requirements.txt" \
-    && su - $ODOO_USER -c "python3 -m compileall -q  /home/odoo/.local/lib/python*/" \
-    && su - $ODOO_USER -c "pip install --user --no-cache-dir -e $SOURCES/odoo" \
-    && su - $ODOO_USER -c "autoaggregate_pip --config \"$RESOURCES/saas-odoo_project_repos.yml\" --output \"$SOURCES/repositories\"" \
-    && su - $ODOO_USER -c "autoaggregate_pip --config \"$RESOURCES/saas-odoo_project_version_repos.yml\" --output \"$SOURCES/repositories\"" \
+    && su $ODOO_USER -c "pip install --no-cache-dir --prefer-binary -r /tools.test.requirements.txt" \
+    && su $ODOO_USER -c "python -m compileall -q $ODOO_HOME/venv/lib/python*/" \
+    && su $ODOO_USER -c "autoaggregate_pip --config \"$RESOURCES/saas-odoo_project_repos.yml\" --output \"$SOURCES/repositories\"" \
+    && su $ODOO_USER -c "autoaggregate_pip --config \"$RESOURCES/saas-odoo_project_version_repos.yml\" --output \"$SOURCES/repositories\"" \
     && rm $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml \
+    # ini - upgrade-util install issue
+    && pip uninstall -y odoo_upgrade && rm -rf $ODOO_HOME/venv/lib/python*/site-packages/odoo \
+    # end - upgrade-util install issue
+    && su $ODOO_USER -c "pip install --no-cache-dir -e $SOURCES/odoo" \
     && chsh -s /bin/false $ODOO_USER
 USER $ODOO_USER
