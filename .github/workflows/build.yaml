@@ -65,6 +65,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Get Odoo requirements
+        run: |
+          curl -Ls https://raw.githubusercontent.com/odoo/odoo/${{ env.ODOO_TARGET }}/requirements.txt -o ${{ env.ODOO_TARGET }}/requirements/odoo/base/requirements.txt
+
       - name: Get odoo build
         id: get-odoo-build
         run: echo "date=$(/bin/date -u "+%Y%m")" >> $GITHUB_OUTPUT

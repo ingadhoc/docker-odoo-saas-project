@@ -75,8 +75,16 @@ COPY --chown=$ODOO_UID:$ODOO_GID ./$ODOO_VERSION/bin/ /tmp/bin
 COPY --chown=$ODOO_UID:$ODOO_GID ./$ODOO_VERSION/resources/ /tmp/resources
 # COPY UNRAR libs
 COPY --from=unrar --chown=root:root --chmod=755 /usr/lib/libunrar.* /usr/lib/
-# Enable Odoo user and filestore
-RUN groupadd --gid $ODOO_GID $ODOO_GROUP \
+
+RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/common/common.packages,dst=/common.packages \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/common/requirements.txt,dst=/common.requirements.txt \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/base/build.packages,dst=/odoo.build.packages \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/base/requirements.txt,dst=/odoo.requirements.txt \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/requirements.txt,dst=/odoo.adhoc.requirements.txt \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/build.packages,dst=/odoo.adhoc.build.packages \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/extra.packages,dst=/odoo.adhoc.extra.packages \
+    #### Enable Odoo user and filestore
+    groupadd --gid $ODOO_GID $ODOO_GROUP \
     && useradd -u $ODOO_UID -md $ODOO_HOME $ODOO_USER -g $ODOO_GROUP -s /bin/false \
     && chsh -s /bin/bash $ODOO_USER \
     && su $ODOO_USER -c "\
@@ -106,46 +114,27 @@ RUN groupadd --gid $ODOO_GID $ODOO_GROUP \
         ./libjpeg-turbo8.deb \
         ./wkhtmltox.deb \
     && apt-get purge -yqq curl \
-    && apt-get autopurge -yqq \
-    && rm -Rf wkhtmltox.deb libjpeg-turbo8.deb /var/lib/apt/lists/* /tmp/*
-
-# Common
-RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/common/common.packages,dst=/common.packages \
-    --mount=type=bind,src=./$ODOO_VERSION/requirements/common/requirements.txt,dst=/common.requirements.txt \
-    apt-get -qq update \
+    && rm -Rf wkhtmltox.deb libjpeg-turbo8.deb \
+    #### Common
     && echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
     && grep -v '^#' /common.packages | xargs apt-get install -yqq --no-install-recommends \
     && chsh -s /bin/bash $ODOO_USER \
     # Create venv for odoo
     && su $ODOO_USER -c "python -m venv $ODOO_HOME/venv" \
     # Upgrade pip (user level)
-    && su $ODOO_USER -c  "pip install --upgrade pip" \
+    && su $ODOO_USER -c "pip install --upgrade pip" \
     # Sice this point we are using the venv (pip and python command refer to the venv)
-    && su $ODOO_USER -c  "pip install --no-cache-dir --prefer-binary -r /common.requirements.txt \
+    && su $ODOO_USER -c "pip install --no-cache-dir --prefer-binary -r /common.requirements.txt \
         && python -m compileall -q $ODOO_HOME/venv/lib/python*/" \
     && chsh -s /bin/false $ODOO_USER \
-    && apt-get autopurge -yqq \
-    && rm -Rf /var/lib/apt/lists/* /tmp/*
-
-# Install Odoo hard & soft dependencies
-ADD --chown=$ODOO_USER:$ODOO_USER https://raw.githubusercontent.com/$ODOO_SOURCE/$ODOO_VERSION/requirements.txt /odoo.requirements.txt
-RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/base/build.packages,dst=/odoo.build.packages \
-    apt-get -qq update \
+    #### Install Odoo hard & soft dependencies
     && grep -v '^#' /odoo.build.packages | xargs apt-get install -yqq --no-install-recommends \
     && chsh -s /bin/bash $ODOO_USER \
     && su $ODOO_USER -c "pip install --no-cache-dir --prefer-binary -r /odoo.requirements.txt \
         && python -m compileall -q $ODOO_HOME/venv/lib/python*/" \
     && chsh -s /bin/false $ODOO_USER \
-    && rm /odoo.requirements.txt \
     && grep -v '^#' /odoo.build.packages | xargs apt-get purge -yqq \
-    && apt-get autopurge -yqq \
-    && rm -Rf /var/lib/apt/lists/* /tmp/*
-
-# Odoo by Adhoc requirements
-RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/requirements.txt,dst=/odoo.adhoc.requirements.txt \
-    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/build.packages,dst=/odoo.adhoc.build.packages \
-    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/extra.packages,dst=/odoo.adhoc.extra.packages \
-    apt-get -qq update \
+    #### Odoo by Adhoc requirements
     && grep -v '^#' /odoo.adhoc.extra.packages | xargs apt-get install -yqq --no-install-recommends \
     && grep -v '^#' /odoo.adhoc.build.packages | xargs apt-get install -yqq --no-install-recommends \
     # Enabling shell for odoo user
