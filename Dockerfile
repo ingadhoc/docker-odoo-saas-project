@@ -240,6 +240,7 @@ USER root
 
 RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/dev.packages,dst=/tools.dev.dev.packages \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/requirements.txt,dst=/tools.dev.requirements.txt \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/bashrc.sh,dst=/tools.dev.bashrc.sh \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/test/test.packages,dst=/tools.test.test.packages \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/test/requirements.txt,dst=/tools.test.requirements.txt \
     --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
@@ -251,6 +252,7 @@ RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/dev.packages,ds
     && grep -v '^#' /tools.dev.dev.packages | xargs apt-get install -yqq --no-install-recommends \
     && su $ODOO_USER -c "pip install --no-cache-dir --prefer-binary -r /tools.dev.requirements.txt" \
     && su $ODOO_USER -c "python -m compileall -q $ODOO_HOME/venv/lib/python*/" \
+    && cat /tools.dev.bashrc.sh >> $ODOO_HOME/.bashrc \
     # Test Tools ( Used by runbot )
     && grep -v '^#' /tools.test.test.packages | xargs apt-get install -yqq --no-install-recommends \
     && su $ODOO_USER -c "pip install --no-cache-dir --prefer-binary -r /tools.test.requirements.txt" \
