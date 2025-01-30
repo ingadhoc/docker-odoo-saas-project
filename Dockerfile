@@ -208,9 +208,6 @@ RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     # Aggregate new repositories of this image # TODO: NO PERMITIR INSTALACIONES DE LOS REPOSITORIOS
     && autoaggregate --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories" \
     && autoaggregate --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output "$SOURCES/repositories" \
-    # ini - upgrade-util install issue
-    && cd $SOURCES/upgrade-util; rm -rf src/mail src/base/; mv -f src/* ../odoo/odoo/upgrade \
-    # end - upgrade-util install issue
     && find $SOURCES -name "*.git" -type d -execdir sh -c "pwd && echo , && git log  -n 1  --remotes=origin --pretty=format:\"%H\" && echo \;; " \; | xargs -n3 > $ODOO_HOME/repo_heads.txt \
     && curl -X POST $BASE_URL/report_sha$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d` -H "Content-Type: application/json" -H "Accept: application/json" -d "@$ODOO_HOME/repo_heads.txt" \
     && unset BASE_URL URL_SUFIX
@@ -230,7 +227,9 @@ RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     && autoaggregate_pip --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output "$SOURCES/repositories" \
     && rm $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml \
     # ini - upgrade-util install issue
-    && pip uninstall -y odoo_upgrade && rm -rf $ODOO_HOME/venv/lib/python*/site-packages/odoo \
+    && rm -rf $SOURCES/upgrade-util/src/mail $SOURCES/upgrade-util/src/base/ \
+    && mv -f $SOURCES/upgrade-util/src/* $SOURCES/odoo/odoo/upgrade \
+    && rm -rf $ODOO_HOME/venv/lib/python*/site-packages/odoo \
     # end - upgrade-util install issue
     && pip install --no-cache-dir -e $SOURCES/odoo
 
@@ -240,25 +239,31 @@ COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_
 USER root
 
 RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/dev.packages,dst=/tools.dev.dev.packages \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/requirements.txt,dst=/tools.dev.requirements.txt \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/test/test.packages,dst=/tools.test.test.packages \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/test/requirements.txt,dst=/tools.test.requirements.txt \
     --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
     --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
     apt-get -qq update \
+    && chsh -s /bin/bash $ODOO_USER \
     # Dev Tools ( Used by developers )
     && grep -v '^#' /tools.dev.dev.packages | xargs apt-get install -yqq --no-install-recommends \
+    && su $ODOO_USER -c "pip install --no-cache-dir --prefer-binary -r /tools.dev.requirements.txt" \
+    && su $ODOO_USER -c "python -m compileall -q $ODOO_HOME/venv/lib/python*/" \
     # Test Tools ( Used by runbot )
     && grep -v '^#' /tools.test.test.packages | xargs apt-get install -yqq --no-install-recommends \
-    && chsh -s /bin/bash $ODOO_USER \
     && su $ODOO_USER -c "pip install --no-cache-dir --prefer-binary -r /tools.test.requirements.txt" \
     && su $ODOO_USER -c "python -m compileall -q $ODOO_HOME/venv/lib/python*/" \
     && su $ODOO_USER -c "autoaggregate_pip --config \"$RESOURCES/saas-odoo_project_repos.yml\" --output \"$SOURCES/repositories\"" \
     && su $ODOO_USER -c "autoaggregate_pip --config \"$RESOURCES/saas-odoo_project_version_repos.yml\" --output \"$SOURCES/repositories\"" \
     && rm $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml \
     # ini - upgrade-util install issue
-    && pip uninstall -y odoo_upgrade && rm -rf $ODOO_HOME/venv/lib/python*/site-packages/odoo \
+    && su $ODOO_USER -c "rm -rf $SOURCES/upgrade-util/src/mail $SOURCES/upgrade-util/src/base/" \
+    && su $ODOO_USER -c "mv -f $SOURCES/upgrade-util/src/* $SOURCES/odoo/odoo/upgrade" \
+    && su $ODOO_USER -c "rm -rf $ODOO_HOME/venv/lib/python*/site-packages/odoo" \
     # end - upgrade-util install issue
     && su $ODOO_USER -c "pip install --no-cache-dir -e $SOURCES/odoo" \
-    && chsh -s /bin/false $ODOO_USER
+    && echo "$ODOO_USER  ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/$ODOO_USER
+
 USER $ODOO_USER
