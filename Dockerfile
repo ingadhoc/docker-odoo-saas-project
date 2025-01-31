@@ -212,6 +212,8 @@ RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     && curl -X POST $BASE_URL/report_sha$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d` -H "Content-Type: application/json" -H "Accept: application/json" -d "@$ODOO_HOME/repo_heads.txt" \
     && unset BASE_URL URL_SUFIX
 
+## PROD IMAGE
+
 FROM aggregate-source AS aggregate-source-without-git
 RUN find $SOURCES \( -path $SOURCES/openupgradelib -o -path $SOURCES/upgrade-util \) -prune -o -type d -name ".git" -exec rm -rf {} +
 
@@ -219,7 +221,6 @@ RUN find $SOURCES \( -path $SOURCES/openupgradelib -o -path $SOURCES/upgrade-uti
 FROM os-base-updated AS prod
 COPY --from=aggregate-source-without-git --chown=$ODOO_USER:$ODOO_USER $SOURCES $SOURCES
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml $RESOURCES
-
 RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
     --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
@@ -233,11 +234,12 @@ RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     # end - upgrade-util install issue
     && pip install --no-cache-dir -e $SOURCES/odoo
 
+## DEV IMAGE
+
 FROM os-base-updated AS dev
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $SOURCES $SOURCES
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml $RESOURCES
 USER root
-
 RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/dev.packages,dst=/tools.dev.dev.packages \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/requirements.txt,dst=/tools.dev.requirements.txt \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/bashrc.sh,dst=/tools.dev.bashrc.sh \
@@ -267,5 +269,4 @@ RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/dev.packages,ds
     # end - upgrade-util install issue
     && su $ODOO_USER -c "pip install --no-cache-dir -e $SOURCES/odoo" \
     && echo "$ODOO_USER  ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/$ODOO_USER
-
 USER $ODOO_USER
