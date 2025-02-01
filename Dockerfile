@@ -193,6 +193,7 @@ ARG DOCKER_IMAGE="adhoc/odoo-adhoc" \
 RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
     --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
+    --mount=type=bind,src=./$ODOO_VERSION/dev/fix_repos.sh,dst=/fix_repos.sh \
     git config --global init.defaultBranch main \
     && git config --global pull.rebase true \
     && git config --global user.name "John Doe" \
@@ -210,6 +211,8 @@ RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     && autoaggregate --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output "$SOURCES/repositories" \
     && find $SOURCES -name "*.git" -type d -execdir sh -c "pwd && echo , && git log  -n 1  --remotes=origin --pretty=format:\"%H\" && echo \;; " \; | xargs -n3 > $ODOO_HOME/repo_heads.txt \
     && curl -X POST $BASE_URL/report_sha$URL_SUFIX\&minor_version=`date -u +%Y.%m.%d` -H "Content-Type: application/json" -H "Accept: application/json" -d "@$ODOO_HOME/repo_heads.txt" \
+    # Remplace all http origins by ssh
+    && /fix_repos.sh \
     && unset BASE_URL URL_SUFIX
 
 ## PROD IMAGE
@@ -242,7 +245,7 @@ COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_
 USER root
 RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/dev.packages,dst=/tools.dev.dev.packages \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/requirements.txt,dst=/tools.dev.requirements.txt \
-    --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/bashrc.sh,dst=/tools.dev.bashrc.sh \
+    --mount=type=bind,src=./$ODOO_VERSION/dev/bashrc.sh,dst=/tools.dev.bashrc.sh \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/test/test.packages,dst=/tools.test.test.packages \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/test/requirements.txt,dst=/tools.test.requirements.txt \
     --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
@@ -257,18 +260,23 @@ RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/dev.packages,ds
     && cat /tools.dev.bashrc.sh >> $ODOO_HOME/.bashrc \
     # Test Tools ( Used by runbot )
     && grep -v '^#' /tools.test.test.packages | xargs apt-get install -yqq --no-install-recommends \
+    # add user to sudoers
+    && echo "$ODOO_USER  ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/$ODOO_USER \
     && su $ODOO_USER -c "pip install --no-cache-dir --prefer-binary -r /tools.test.requirements.txt" \
-    && su $ODOO_USER -c "python -m compileall -q $ODOO_HOME/venv/lib/python*/" \
-    && su $ODOO_USER -c "autoaggregate_pip --config \"$RESOURCES/saas-odoo_project_repos.yml\" --output \"$SOURCES/repositories\"" \
-    && su $ODOO_USER -c "autoaggregate_pip --config \"$RESOURCES/saas-odoo_project_version_repos.yml\" --output \"$SOURCES/repositories\"" \
+    && su $ODOO_USER -c "python -m compileall -q $ODOO_HOME/venv/lib/python*/"
+    #
+USER $ODOO_USER
+# Run post add instalation (TODO: remove this requirements)
+RUN autoaggregate_pip --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories" \
+    && autoaggregate_pip --config "$RESOURCES/saas-odoo_project_version_repos.yml" --output "$SOURCES/repositories" \
     && rm $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml \
     # ini - upgrade-util install issue
-    && su $ODOO_USER -c "rm -rf $SOURCES/upgrade-util/src/mail $SOURCES/upgrade-util/src/base/" \
-    && su $ODOO_USER -c "mv -f $SOURCES/upgrade-util/src/* $SOURCES/odoo/odoo/upgrade" \
-    && su $ODOO_USER -c "rm -rf $ODOO_HOME/venv/lib/python*/site-packages/odoo" \
+    && rm -rf $SOURCES/upgrade-util/src/mail $SOURCES/upgrade-util/src/base/ \
+    && mv -f $SOURCES/upgrade-util/src/* $SOURCES/odoo/odoo/upgrade \
+    && rm -rf $ODOO_HOME/venv/lib/python*/site-packages/odoo \
     # Skip these files in git tracking
-    && su $ODOO_USER -c "cd $SOURCES/odoo/odoo/upgrade; git update-index --assume-unchanged $(git ls-files | tr '\n' ' '); cd -" \
+    && cd $SOURCES/odoo; git update-index --assume-unchanged $(git ls-files $SOURCES/odoo/odoo/upgrade --full-name | tr '\n' ' '); git status >/dev/null; cd - \
     # end - upgrade-util install issue
-    && su $ODOO_USER -c "pip install --no-cache-dir -e $SOURCES/odoo" \
-    && echo "$ODOO_USER  ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/$ODOO_USER
-USER $ODOO_USER
+    # Installing Odoo
+    && pip install --no-cache-dir -e $SOURCES/odoo
+
