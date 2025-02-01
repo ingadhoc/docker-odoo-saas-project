@@ -266,6 +266,8 @@ RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/dev.packages,ds
     && su $ODOO_USER -c "rm -rf $SOURCES/upgrade-util/src/mail $SOURCES/upgrade-util/src/base/" \
     && su $ODOO_USER -c "mv -f $SOURCES/upgrade-util/src/* $SOURCES/odoo/odoo/upgrade" \
     && su $ODOO_USER -c "rm -rf $ODOO_HOME/venv/lib/python*/site-packages/odoo" \
+    # Skip these files in git tracking
+    && su $ODOO_USER -c "cd $SOURCES/odoo/odoo/upgrade; git update-index --assume-unchanged $(git ls-files | tr '\n' ' '); cd -" \
     # end - upgrade-util install issue
     && su $ODOO_USER -c "pip install --no-cache-dir -e $SOURCES/odoo" \
     && echo "$ODOO_USER  ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/$ODOO_USER

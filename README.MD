@@ -27,4 +27,6 @@ Run the image
 
 ```sh
 docker run -it --rm --entrypoint="" adhoc/odoo-adhoc:17.0-dev  bash
-```
+# or
+docker run -e WAIT_PG=False -it --rm adhoc/odoo-adhoc:18.0.dev bash
+ ```
