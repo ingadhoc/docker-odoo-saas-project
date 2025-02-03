@@ -155,9 +155,6 @@ RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/common/common.packages,ds
     && apt-get -yqq autoremove \
     && rm -Rf /var/lib/apt/lists/* /tmp/*
 
-# required by saas_k8s (Helm)
-COPY --from=alpine/helm --chmod=755 --chown=root:root /usr/bin/helm /usr/local/bin/helm
-
 # GEOIP
 COPY --from=geo-ip --chown=$ODOO_USER:$ODOO_USER /GeoIP $RESOURCES/GeoIP
 
