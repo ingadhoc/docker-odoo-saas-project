@@ -59,8 +59,7 @@ jobs:
       MAXMIND_GEOIP_UPDATE: ${{ needs.geoip.outputs.last-modified }}
       REGISTRY_NAME: "docker.io"
       DOCKER_IMAGE: "adhoc/odoo-adhoc"
-      # TODO: "" remove for prod
-      DOCKER_IMAGE_TAG_SUFIX: ".next"
+      DOCKER_IMAGE_TAG_SUFIX: ""
     steps:
       - name: Checkout
         uses: actions/checkout@v4
