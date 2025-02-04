@@ -59,3 +59,5 @@ websocket-client==1.8.0
 kubernetes==31.0.0
 # Requerimiento IA: 4 - Integrar el modelo en Odoo (#45793)
 scikit-learn==1.6.1
+# json logs #46062
+python-json-logger
