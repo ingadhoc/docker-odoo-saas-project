@@ -181,11 +181,12 @@ RUN export NEEDRESTART_MODE=a \
     && apt-get -qqy clean \
     && rm -Rf /var/lib/apt/lists/* /tmp/* \
     && echo "$ODOO_VERSION.$ODOO_MINOR_VERSION" > ODOO_BY_ADHOC_VERSION
-USER $ODOO_USER
 
 FROM os-base-updated AS aggregate-source
 ARG DOCKER_IMAGE="adhoc/odoo-adhoc" \
     ODOO_MINOR_VERSION=""
+RUN apt-get -qqy update && apt-get install -yqq --no-install-recommends curl
+USER $ODOO_USER
 RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     --mount=type=secret,id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
     --mount=type=secret,id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
@@ -218,6 +219,7 @@ RUN find $SOURCES \( -path $SOURCES/openupgradelib -o -path $SOURCES/upgrade-uti
 
 # TODO: See: COPY --exclude (next Dockerfile release)
 FROM os-base-updated AS prod
+USER $ODOO_USER
 COPY --from=aggregate-source-without-git --chown=$ODOO_USER:$ODOO_USER $SOURCES $SOURCES
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml $RESOURCES
 RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
@@ -238,7 +240,6 @@ RUN --mount=type=secret,id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
 FROM os-base-updated AS dev
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $SOURCES $SOURCES
 COPY --from=aggregate-source --chown=$ODOO_USER:$ODOO_USER $RESOURCES/saas-odoo_project_repos.yml $RESOURCES/saas-odoo_project_version_repos.yml $RESOURCES
-USER root
 RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/dev.packages,dst=/tools.dev.dev.packages \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/requirements.txt,dst=/tools.dev.requirements.txt \
     --mount=type=bind,src=./$ODOO_VERSION/dev/bashrc.sh,dst=/tools.dev.bashrc.sh \
@@ -260,7 +261,6 @@ RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/dev.packages,ds
     && echo "$ODOO_USER  ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/$ODOO_USER \
     && su $ODOO_USER -c "pip install --no-cache-dir --prefer-binary -r /tools.test.requirements.txt" \
     && su $ODOO_USER -c "python -m compileall -q $ODOO_HOME/venv/lib/python*/"
-
 USER $ODOO_USER
 # Run post add instalation (TODO: remove this requirements)
 RUN autoaggregate_pip --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories" \
