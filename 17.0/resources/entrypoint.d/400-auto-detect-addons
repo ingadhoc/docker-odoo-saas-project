@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import os
+import logging
+_logger = logging.getLogger(__name__)
+
+
+RESOURCES = os.environ.get('RESOURCES')
+SOURCES = os.environ.get('SOURCES')
+REPOSITORIES = os.path.join(SOURCES, 'repositories')
+CUSTOM = os.environ.get('CUSTOM')
+IGNORE_SRC_REPOSITORIES = os.environ.get('IGNORE_SRC_REPOSITORIES')
+CUSTOM_REPOSITORIES = os.path.join(CUSTOM, 'repositories')
+
+addons = []
+
+# use odoo in custom or in src
+ODOO_PATH = os.path.join(CUSTOM, 'odoo') if os.path.isdir(os.path.join(CUSTOM, 'odoo')) else os.path.join(SOURCES, 'odoo')
+
+if os.path.isdir(ODOO_PATH):
+    addons.append(os.path.join(ODOO_PATH, 'addons'))
+    # Handle versions <= 9.0, where odoo is called openerp
+    if os.environ.get('ODOO_VERSION') in ['6.0', '7.0', '8.0', '9.0']:
+        addons.append(os.path.join(ODOO_PATH, 'openerp', 'addons'))
+    else:
+        addons.append(os.path.join(ODOO_PATH, 'odoo', 'addons'))
+
+# Handle enterprise: use enterprise in custom or in src
+ENTERPRISE_PATH = os.path.join(CUSTOM, 'enterprise') if \
+    os.path.isdir(os.path.join(CUSTOM, 'enterprise')) else os.path.join(SOURCES, 'enterprise')
+if os.path.isdir(ENTERPRISE_PATH):
+    addons.insert(0, os.path.join(ENTERPRISE_PATH))
+
+# Project repositories
+repo_addons = []
+
+# Custom repositories, usually mounted for development
+if os.path.isdir(CUSTOM_REPOSITORIES):
+    repo_addons += [
+        os.path.join(CUSTOM_REPOSITORIES, d)
+        for d in sorted(os.listdir(CUSTOM_REPOSITORIES))
+        if os.path.isdir(os.path.join(CUSTOM_REPOSITORIES, d))
+    ]
+
+# Add src repositories if not available on custom
+if not IGNORE_SRC_REPOSITORIES:
+    repo_addons += [
+        os.path.join(REPOSITORIES, d)
+        for d in sorted(os.listdir(REPOSITORIES))
+        if os.path.isdir(os.path.join(REPOSITORIES, d)) and d not in os.listdir(CUSTOM_REPOSITORIES)
+    ]
+
+# Repo addons are preprended, in case we want to overwrite odoo modules
+addons = repo_addons + addons
+
+# Overwrite 10-addons.conf
+_logger.debug('Updating addons_path.. %s' % addons)
+with open(os.path.join(RESOURCES, 'conf.d', '10-addons.conf'), 'w+') as file:
+    file.write('[options]\naddons_path = %s' % ','.join(addons))

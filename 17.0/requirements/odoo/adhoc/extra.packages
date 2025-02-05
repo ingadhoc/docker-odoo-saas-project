@@ -1,0 +1,10 @@
+swig
+parallel
+ca-certificates
+# required by pip install git+https sources
+wget
+gnupg2
+# install rsync for odoo upgrade scripts
+rsync
+# para ayudar en debugging (no requerido)
+iputils-ping
