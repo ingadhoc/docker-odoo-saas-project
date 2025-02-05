@@ -22,11 +22,20 @@ export MAXMIND_LICENSE_USR=userid
 export GITHUB_BOT_TOKEN=anothersecretotocken
 export DOCKER_USERNAME=mydockeruser
 export DOCKER_PASSWORD=secretdockerpassword
+
+case "${{ ODOO_VERSION }}" in
+  "18.0")
+    export PYTHON_BASE_IMAGE="3.12-slim-bookworm"
+    ;;
+  "17.0"|"16.0")
+    export PYTHON_BASE_IMAGE="3.10-slim-bullseye"
+    ;;
+esac
 ```
 
 ```sh
 gh act workflow_dispatch \
- --input odoo_target="18.0" \
+ --input odoo_target=$ODOO_VERSION \
  -s DOCKER_USERNAME=$DOCKER_USERNAME \
  -s DOCKER_PASSWORD=$DOCKER_PASSWORD \
  -s MAXMIND_LICENSE_USR=$MAXMIND_LICENSE_USR \
@@ -43,7 +52,8 @@ docker buildx build \
     --secret id=SAAS_PROVIDER_URL,env=SAAS_PROVIDER_URL \
     --secret id=SAAS_PROVIDER_TOKEN,env=SAAS_PROVIDER_TOKEN \
     --secret id=GITHUB_BOT_TOKEN,env=GITHUB_BOT_TOKEN \
-    --build-arg ODOO_VERSION="18.0" \
+    --build-arg ODOO_VERSION=$ODOO_VERSION \
+    --build-arg PYTHON_BASE_IMAGE="$PYTHON_BASE_IMAGE" \
     --target dev \
     -t "dev" \
     .

@@ -8,7 +8,7 @@ You can see the docs on doc folder
 
 GITHUB_BOT_TOKEN ver en dockerhub
 SAAS_PROVIDER_TOKEN  ver en dockerhub
-BASE_IMAGE_TAG=17.0
+BASE_IMAGE_TAG=18.0
 
 ```sh
 export DOCKER_BUILDKIT=1 \
@@ -20,13 +20,13 @@ export DOCKER_BUILDKIT=1 \
     --build-arg SAAS_PROVIDER_URL=https://www.adhoc.com.ar \
     --build-arg DOCKER_IMAGE=adhoc/odoo-adhoc \
     -f Dockerfile .
-# docker push adhoc/odoo-adhoc:17.0-dev
+# docker push adhoc/odoo-adhoc:18.0-dev
 ```
 
 Run the image
 
 ```sh
-docker run -it --rm --entrypoint="" adhoc/odoo-adhoc:17.0-dev  bash
+docker run -it --rm --entrypoint="" adhoc/odoo-adhoc:18.0-dev  bash
 # or
 docker run -e WAIT_PG=False -it --rm adhoc/odoo-adhoc:18.0.dev bash
  ```

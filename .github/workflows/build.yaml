@@ -59,7 +59,7 @@ jobs:
       MAXMIND_GEOIP_UPDATE: ${{ needs.geoip.outputs.last-modified }}
       REGISTRY_NAME: "docker.io"
       DOCKER_IMAGE: "adhoc/odoo-adhoc"
-      DOCKER_IMAGE_TAG_SUFIX: ""
+      DOCKER_IMAGE_TAG_SUFIX: ".next" # TODO: Remove!
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -88,6 +88,15 @@ jobs:
           echo "daily=$DAILY_TAG" >> $GITHUB_OUTPUT
           BUILD_TAG=$DAILY_TAG.${{ github.run_number }}
           echo "build=$BUILD_TAG" >> $GITHUB_OUTPUT
+
+      - name: image options
+        id: image-options
+        run: |
+          case "${{ env.ODOO_TARGET }}" in
+            "18.0")
+              echo "python-base-image=3.12-slim-bookworm" >> $GITHUB_OUTPUT
+              ;;
+          esac
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -120,6 +129,7 @@ jobs:
             ODOO_MINOR_VERSION=${{ steps.get-odoo-adhoc-build.outputs.date }}
             ODOO_BUILD=${{ steps.get-odoo-build.outputs.date }}.${{ env.ODOO_BUILD }}
             ODOO_BY_ADHOC_BUILD=${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}.${{ env.ODOO_BY_ADHOC_BUILD }}
+            PYTHON_BASE_IMAGE=${{ steps.image-options.outputs.python-base-image }}
           target: dev
           tags: |
             ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.major }}.dev
@@ -140,12 +150,13 @@ jobs:
             SAAS_PROVIDER_TOKEN=${{ secrets.SAAS_PROVIDER_TOKEN }}
             GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN_GITHUB }}
           build-args: |
-            MAXMIND_UPDATE=${{ env.MAXMIND_UPDATE }}
+            MAXMIND_UPDATE=${{ env.MAXMIND_GEOIP_UPDATE }}
             ODOO_VERSION=${{ env.ODOO_TARGET }}
             DOCKER_IMAGE=${{ env.DOCKER_IMAGE }}
             ODOO_MINOR_VERSION=${{ steps.get-odoo-adhoc-build.outputs.date }}
             ODOO_BUILD=${{ steps.get-odoo-build.outputs.date }}.${{ env.ODOO_BUILD }}
             ODOO_BY_ADHOC_BUILD=${{ steps.get-odoo-adhoc-build.outputs.date }}.${{ github.run_number }}.${{ env.ODOO_BY_ADHOC_BUILD }}
+            PYTHON_BASE_IMAGE=${{ steps.image-options.outputs.python-base-image }}
           target: prod
           tags: |
             ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.major }}

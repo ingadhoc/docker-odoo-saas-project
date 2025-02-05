@@ -19,10 +19,12 @@ psycopg2-binary
 ## ingadhoc/website
 html2text==2024.2.26
 ## ingadhoc/odoo-argentina
-# forzamos version httplib2==0.20.4 porque con lanzamiento de 0.21 (https://pypi.org/project/httplib2/#history) empezo a dar error de ticket 56946
 httplib2==0.22.0
-git+https://github.com/pysimplesoap/pysimplesoap@a330d9c4af1b007fe1436f979ff0b9f66613136e
+# git+https://github.com/pysimplesoap/pysimplesoap@a330d9c4af1b007fe1436f979ff0b9f66613136e
+git+https://github.com/pysimplesoap/pysimplesoap@py311
 git+https://github.com/ingadhoc/pyafipws@py3k
+# git+https://github.com/pysimplesoap/pysimplesoap@stable_py3k
+# git+https://github.com/reingart/pyafipws@py3k
 ## ingadhoc/aeroo
 # use this genshi version to fix error when, for eg, you send arguments like "date=True" check this  \https://genshi.edgewall.org/ticket/600
 genshi==0.7.9
@@ -59,5 +61,5 @@ websocket-client==1.8.0
 kubernetes==31.0.0
 # Requerimiento IA: 4 - Integrar el modelo en Odoo (#45793)
 scikit-learn==1.6.1
-# json logs #46062
+# json logs #46062 (oca module - logging_json)
 python-json-logger

@@ -1,5 +1,5 @@
 BuildNotes.md
 act
 act_ctx
-??.0/requirements/odoo/base/requirements.txt
+??.0/requirements/odoo/base/requirements*.txt
 tmp

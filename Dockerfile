@@ -1,3 +1,5 @@
+ARG PYTHON_BASE_IMAGE=3.12-slim-bookworm
+
 # GeoIP db from MaxMind
 FROM debian:12-slim@sha256:d365f4920711a9074c4bcd178e8f457ee59250426441ab2a5f8106ed8fe948eb AS geo-ip
 ARG MAXMIND_UPDATE=default
@@ -34,7 +36,7 @@ RUN apt-get -qq update \
 ##### END AUX IMAGES
 
 # ODOO COMMON IMAGE
-FROM python:3.12-slim-bookworm AS os-base
+FROM python:${PYTHON_BASE_IMAGE} AS os-base
 ARG ODOO_VERSION=18.0 \
     ODOO_SOURCE=odoo/odoo \
     ODOO_BUILD=0
@@ -79,7 +81,8 @@ COPY --from=unrar --chown=root:root --chmod=755 /usr/lib/libunrar.* /usr/lib/
 RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/common/common.packages,dst=/common.packages \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/common/requirements.txt,dst=/common.requirements.txt \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/base/build.packages,dst=/odoo.build.packages \
-    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/base/requirements.txt,dst=/odoo.requirements.txt \
+    --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/base/requirements.txt,dst=/base.requirements.txt \
+    --mount=type=bind,src=./$ODOO_VERSION/tools/odoo_dep_fixer.sh,dst=/odoo_dep_fixer.sh \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/requirements.txt,dst=/odoo.adhoc.requirements.txt \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/build.packages,dst=/odoo.adhoc.build.packages \
     --mount=type=bind,src=./$ODOO_VERSION/requirements/odoo/adhoc/extra.packages,dst=/odoo.adhoc.extra.packages \
@@ -102,19 +105,9 @@ RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/common/common.packages,ds
     " \
     && rm -rf /tmp/* \
     && chsh -s /bin/false $ODOO_USER \
-    # Used defined build options
-    && $RESOURCES/build \
-    # WKHTMLTOPDF
     && apt-get -qq update \
-    # TODO: WKHTMLTOPDF_VERSION
-    && apt-get install -yqq --no-install-recommends curl \
-    && curl -sLo libjpeg-turbo8.deb http://mirrors.kernel.org/ubuntu/pool/main/libj/libjpeg-turbo/libjpeg-turbo8_2.1.2-0ubuntu1_amd64.deb \
-    && curl -sLo wkhtmltox.deb https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.jammy_amd64.deb \
-    && apt-get install -yqq --no-install-recommends \
-        ./libjpeg-turbo8.deb \
-        ./wkhtmltox.deb \
-    && apt-get purge -yqq curl \
-    && rm -Rf wkhtmltox.deb libjpeg-turbo8.deb \
+    # User defined build options
+    && $RESOURCES/build \
     #### Common
     && echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
     && grep -v '^#' /common.packages | xargs apt-get install -yqq --no-install-recommends \
@@ -130,8 +123,11 @@ RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/common/common.packages,ds
     #### Install Odoo hard & soft dependencies
     && grep -v '^#' /odoo.build.packages | xargs apt-get install -yqq --no-install-recommends \
     && chsh -s /bin/bash $ODOO_USER \
+    && cp /base.requirements.txt /odoo.requirements.txt \
+    && /odoo_dep_fixer.sh \
     && su $ODOO_USER -c "pip install --no-cache-dir --prefer-binary -r /odoo.requirements.txt \
         && python -m compileall -q $ODOO_HOME/venv/lib/python*/" \
+    && rm /odoo.requirements.txt \
     && chsh -s /bin/false $ODOO_USER \
     && grep -v '^#' /odoo.build.packages | xargs apt-get purge -yqq \
     #### Odoo by Adhoc requirements
@@ -143,13 +139,6 @@ RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/common/common.packages,ds
         && python -m compileall -q $ODOO_HOME/venv/lib/python*/" \
     # Disabling shell for odoo user
     && chsh -s /bin/false $ODOO_USER \
-    # PG Client
-    && apt-get install -yqq --no-install-recommends curl gnupg \
-    && install -d /usr/share/postgresql-common/pgdg \
-    && curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
-    && apt-get -qq update \
-    && apt-get install -yqq --no-install-recommends postgresql-client-15 \
     # Clean up
     && grep -v '^#' /odoo.adhoc.build.packages | xargs apt-get purge -yqq \
     && apt-get -yqq autoremove \
@@ -170,6 +159,16 @@ FROM os-base AS os-base-updated
 ARG ODOO_BY_ADHOC_BUILD \
     ODOO_MINOR_VERSION
 USER root
+# Metadata (https://github.com/opencontainers/image-spec/blob/main/annotations.md)
+LABEL   org.opencontainers.image.vendor="Adhoc" \
+        org.opencontainers.image.version="$ODOO_VERSION.$ODOO_MINOR_VERSION" \
+        org.opencontainers.image.source="https://github.com/ingadhoc/docker-odoo-saas-project" \
+        org.opencontainers.image.url="www.adhoc.com.ar" \
+        org.opencontainers.image.revision="$ODOO_BY_ADHOC_BUILD" \
+        org.opencontainers.image.created="$ODOO_MINOR_VERSION" \
+        org.opencontainers.image.authors="Adhoc DevOps Team" \
+        org.opencontainers.image.licenses=Apache-2.0
+
 RUN export NEEDRESTART_MODE=a \
     && export DEBIAN_FRONTEND=noninteractive \
     ## Questions that you really, really need to see (or else). ##
@@ -261,7 +260,7 @@ RUN --mount=type=bind,src=./$ODOO_VERSION/requirements/tools/dev/dev.packages,ds
     && echo "$ODOO_USER  ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/$ODOO_USER \
     && su $ODOO_USER -c "pip install --no-cache-dir --prefer-binary -r /tools.test.requirements.txt" \
     && su $ODOO_USER -c "python -m compileall -q $ODOO_HOME/venv/lib/python*/"
-    #
+
 USER $ODOO_USER
 # Run post add instalation (TODO: remove this requirements)
 RUN autoaggregate_pip --config "$RESOURCES/saas-odoo_project_repos.yml" --output "$SOURCES/repositories" \

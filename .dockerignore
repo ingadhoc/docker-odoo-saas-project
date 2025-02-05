@@ -2,3 +2,6 @@
 .hooks
 README.MD
 .github
+doc/*
+readme.md
+*/**/readme.md
