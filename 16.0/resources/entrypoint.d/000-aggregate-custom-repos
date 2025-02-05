@@ -1,0 +1,102 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from multiprocessing import cpu_count
+import os
+import shutil
+from subprocess import check_call
+
+import logging
+import subprocess
+import tempfile
+import requests
+
+import yaml
+_logger = logging.getLogger(__name__)
+
+# Recreate and run git-aggregator
+SOURCES = os.environ.get('SOURCES')
+RESOURCES = os.environ.get('RESOURCES')
+REPOS_YAML = os.environ.get('REPOS_YAML')
+
+DATABASE = os.environ.get('DATABASE')
+SAAS_PROVIDER_URL = os.environ.get('SAAS_PROVIDER_URL')
+SAAS_PROVIDER_TOKEN = os.environ.get('SAAS_PROVIDER_TOKEN')
+
+def notifyError(msg:str) -> None:
+    try:
+        requests.post(
+            f"{SAAS_PROVIDER_URL}/saas_database/info_from_client",
+            json={
+                'database' : DATABASE,
+                'message': f"Error during entrypoint aggregate: {msg}",
+                'level': 'info'
+            },
+            headers={
+                "Content-Type" : "application/json",
+                "Saas-Provider-Token": SAAS_PROVIDER_TOKEN
+            },
+            timeout=10
+        )
+    except:
+        pass
+
+
+if REPOS_YAML and SOURCES:
+    content = REPOS_YAML
+    repos_file = os.path.join(RESOURCES, "custom-repos.yml")
+    with open(repos_file, 'w+') as file:
+        file.write(content)
+
+    _logger.info('Running git aggregator on custom-repos.yml..')
+
+    temp_dir = tempfile.TemporaryDirectory("gitaggregate")
+    temp_repo_base_path = os.path.join(temp_dir.name, 'repositories')
+    os.makedirs(temp_repo_base_path, exist_ok=True)
+
+    env_ctx = os.environ.copy()
+    env_ctx.update({ "SOURCES": ".." })
+
+    try:
+        check_call(
+            [
+                "gitaggregate",
+                "--expand-env",
+                "--config",
+                os.path.abspath(repos_file),
+                "--jobs",
+                str(cpu_count() or 1),
+                "aggregate"
+            ],
+            # Ensure relative path
+            env=env_ctx,
+            cwd=temp_repo_base_path,
+        )
+
+    except Exception as e:
+        msg = "IMPORTANT! Couldn't run gitaggregate correctly. This is what we get: %s" % e
+        notifyError(msg)
+        _logger.error(msg)
+
+    final_repo_base_path = os.path.join(SOURCES, 'repositories')
+    with open(repos_file) as yaml_file:
+        for doc in yaml.safe_load_all(yaml_file):
+            for repo in doc:
+                final_current_repo_path = os.path.abspath(os.path.join(final_repo_base_path, repo))
+                temp_current_repo_path = os.path.abspath(os.path.join(temp_repo_base_path, repo))
+
+                if os.path.exists(final_current_repo_path) and os.path.isdir(final_current_repo_path):
+                    _logger.info(f'Removing old repo {repo}')
+                    shutil.rmtree(final_current_repo_path)
+
+                if os.path.exists(temp_current_repo_path) and os.path.isdir(temp_current_repo_path):
+                    rta = subprocess.run(["git", "status"], capture_output=True, text=True, cwd=temp_current_repo_path)
+                    if "Unmerged paths" in rta.stdout:
+                        msg = f'Conflicts detected on repo {repo}'
+                        _logger.warning(msg)
+                        notifyError(msg)
+                        continue
+
+                    _logger.info(f'Replacing repo {repo}')
+                    shutil.move(temp_current_repo_path, final_current_repo_path)
+
+    temp_dir.cleanup()

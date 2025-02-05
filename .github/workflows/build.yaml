@@ -10,6 +10,8 @@ on:
         type: choice
         options:
         - "18.0"
+        - "17.0"
+        - "16.0"
         default: "18.0"
       odoo_build_force:
         description: "Use unique numbers to force to rebuild base image"
@@ -96,6 +98,9 @@ jobs:
             "18.0")
               echo "python-base-image=3.12-slim-bookworm" >> $GITHUB_OUTPUT
               ;;
+            "17.0"|"16.0")
+              echo "python-base-image=3.10-slim-bullseye" >> $GITHUB_OUTPUT
+              ;;
           esac
 
       - name: Set up Docker Buildx
@@ -123,7 +128,7 @@ jobs:
             SAAS_PROVIDER_TOKEN=${{ secrets.SAAS_PROVIDER_TOKEN }}
             GITHUB_BOT_TOKEN=${{ secrets.BOT_TOKEN_GITHUB }}
           build-args: |
-            MAXMIND_UPDATE=${{ env.MAXMIND_UPDATE }}
+            MAXMIND_UPDATE=${{ env.MAXMIND_GEOIP_UPDATE }}
             ODOO_VERSION=${{ env.ODOO_TARGET }}
             DOCKER_IMAGE=${{ env.DOCKER_IMAGE }}
             ODOO_MINOR_VERSION=${{ steps.get-odoo-adhoc-build.outputs.date }}
