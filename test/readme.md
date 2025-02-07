@@ -23,7 +23,7 @@ export GITHUB_BOT_TOKEN=anothersecretotocken
 export DOCKER_USERNAME=mydockeruser
 export DOCKER_PASSWORD=secretdockerpassword
 
-case "${{ ODOO_VERSION }}" in
+case "$ODOO_VERSION" in
   "18.0")
     export PYTHON_BASE_IMAGE="3.12-slim-bookworm"
     ;;
@@ -34,7 +34,7 @@ esac
 ```
 
 ```sh
-gh act workflow_dispatch \
+gh act -W .github/workflows/buildt.yaml workflow_dispatch \
  --input odoo_target=$ODOO_VERSION \
  -s DOCKER_USERNAME=$DOCKER_USERNAME \
  -s DOCKER_PASSWORD=$DOCKER_PASSWORD \
@@ -43,6 +43,13 @@ gh act workflow_dispatch \
  -s SAAS_PROVIDER_URL=$SAAS_PROVIDER_URL \
  -s SAAS_PROVIDER_TOKEN=$SAAS_PROVIDER_TOKEN \
  -s BOT_TOKEN_GITHUB=$GITHUB_BOT_TOKEN
+
+gh act -W .github/workflows/build_runbot.yaml workflow_dispatch \
+ --input odoo_target=$ODOO_VERSION \
+ -s DOCKER_USERNAME=$DOCKER_USERNAME \
+ -s DOCKER_PASSWORD=$DOCKER_PASSWORD \
+ -s MAXMIND_LICENSE_USR=$MAXMIND_LICENSE_USR \
+ -s MAXMIND_LICENSE_KEY=$MAXMIND_LICENSE_KEY
 ```
 
 ```sh

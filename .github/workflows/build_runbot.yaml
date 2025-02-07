@@ -1,0 +1,105 @@
+name: build-runbot
+
+on:
+  workflow_dispatch:
+    inputs:
+      odoo_target:
+        description: "Odoo Version"
+        required: true
+        type: choice
+        options:
+        - "18.0"
+        - "17.0"
+        - "16.0"
+        default: "18.0"
+
+concurrency:
+  # Gruop by Odoo Version
+  group: runbot-${{ github.event.inputs.odoo_target}}
+  cancel-in-progress: true
+
+jobs:
+  geoip:
+    name: GeoIp
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if GeoIP has any update
+        id: get-last-modified
+        run: |
+          MAXMIND_UPDATE=$(curl -I -sL -u ${{ secrets.MAXMIND_LICENSE_USR }}:${{ secrets.MAXMIND_LICENSE_KEY }} 'https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz' | grep -i 'Last-Modified')
+          MAXMIND_UPDATE=${MAXMIND_UPDATE#*: }
+          MAXMIND_UPDATE=$(date -d "$MAXMIND_UPDATE" +"%Y%m%d%H%M%S")
+          echo "last-modified=$MAXMIND_UPDATE" >> $GITHUB_OUTPUT
+    outputs:
+      last-modified: ${{ steps.get-last-modified.outputs.last-modified }}
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs:
+      - geoip
+    env:
+      ODOO_TARGET: ${{ github.event.inputs.odoo_target }}
+      MAXMIND_GEOIP_UPDATE: ${{ needs.geoip.outputs.last-modified }}
+      REGISTRY_NAME: "docker.io"
+      DOCKER_IMAGE: "adhoc/odoo-adhoc"
+      DOCKER_IMAGE_TAG_SUFIX: ""
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get Odoo requirements
+        run: |
+          curl -Ls https://raw.githubusercontent.com/odoo/odoo/${{ env.ODOO_TARGET }}/requirements.txt -o ${{ env.ODOO_TARGET }}/requirements/odoo/base/requirements.txt
+
+      - name: image tags
+        id: image-tags
+        run: |
+          IMAGE_FULL=${{ env.REGISTRY_NAME }}/${{ env.DOCKER_IMAGE }}
+          echo "image=$IMAGE_FULL" >> $GITHUB_OUTPUT
+          MAJOR_TAG="${{ env.ODOO_TARGET }}${{ env.DOCKER_IMAGE_TAG_SUFIX }}"
+          echo "major=$MAJOR_TAG" >> $GITHUB_OUTPUT
+
+      - name: image options
+        id: image-options
+        run: |
+          case "${{ env.ODOO_TARGET }}" in
+            "18.0")
+              echo "python-base-image=3.12-slim-bookworm" >> $GITHUB_OUTPUT
+              ;;
+            "17.0"|"16.0")
+              echo "python-base-image=3.10-slim-bullseye" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Login to Docker Hub (for pushing the final image)
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY_NAME }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build dev
+        uses: docker/build-push-action@v6
+        with:
+          file: runbot.Dockerfile
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: .
+          push: true
+          secrets: |
+            MAXMIND_LICENSE_USR=${{ secrets.MAXMIND_LICENSE_USR }}
+            MAXMIND_LICENSE_KEY=${{ secrets.MAXMIND_LICENSE_KEY }}
+          build-args: |
+            MAXMIND_UPDATE=${{ env.MAXMIND_GEOIP_UPDATE }}
+            ODOO_VERSION=${{ env.ODOO_TARGET }}
+            DOCKER_IMAGE=${{ env.DOCKER_IMAGE }}
+            ODOO_BUILD=${{ github.run_number }}
+            PYTHON_BASE_IMAGE=${{ steps.image-options.outputs.python-base-image }}
+          target: runbot
+          tags: |
+            ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.major }}.runbot
