@@ -83,7 +83,7 @@ jobs:
         run: |
           IMAGE_FULL=${{ env.REGISTRY_NAME }}/${{ env.DOCKER_IMAGE }}
           echo "image=$IMAGE_FULL" >> $GITHUB_OUTPUT
-          MAJOR_TAG="${{ env.ODOO_TARGET }}${{ env.DOCKER_IMAGE_TAG_SUFIX }}"
+          MAJOR_TAG="${{ env.ODOO_TARGET }}"
           echo "major=$MAJOR_TAG" >> $GITHUB_OUTPUT
           DAILY_TAG=$MAJOR_TAG.${{ steps.get-odoo-adhoc-build.outputs.date }}
           echo "daily=$DAILY_TAG" >> $GITHUB_OUTPUT
@@ -164,9 +164,9 @@ jobs:
             PYTHON_BASE_IMAGE=${{ steps.image-options.outputs.python-base-image }}
           target: prod
           tags: |
-            ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.major }}
-            ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.daily }}
-            ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.build }}
+            ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.major }}${{ env.DOCKER_IMAGE_TAG_SUFIX }}
+            ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.daily }}${{ env.DOCKER_IMAGE_TAG_SUFIX }}
+            ${{ steps.image-tags.outputs.image }}:${{ steps.image-tags.outputs.build }}${{ env.DOCKER_IMAGE_TAG_SUFIX }}
 
     outputs:
       image-daily-tag: ${{ steps.image-tags.outputs.daily }}
