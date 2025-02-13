@@ -178,6 +178,7 @@ jobs:
       - build
     env:
       DOCKER_IMAGE: "adhoc/odoo-adhoc"
+      DOCKER_IMAGE_TAG_SUFIX: ".next" # TODO: Remove!
     steps:
       - name: notify daily build
         id: notify
@@ -189,6 +190,6 @@ jobs:
               "status": "Active"
             },
             "push_data": {
-              "tag": "'${{ needs.build.outputs.image-daily-tag }}'"
+              "tag": "'${{ needs.build.outputs.image-daily-tag }}${{ env.DOCKER_IMAGE_TAG_SUFIX }}'"
             }
           }'
