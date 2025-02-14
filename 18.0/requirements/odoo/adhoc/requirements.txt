@@ -12,6 +12,8 @@ transifex-python
 # This is not longer needed because "dnspython3 has been superseded by the regular dnspython kit, which now supports both Python 2 and Python 3."
 # dnspython3==1.15.0
 google-cloud-storage==2.19.0
+# Used by adhoc provider (saas_k8s)
+google-cloud-compute==1.25.0
 git+https://github.com/rancher/client-python.git@master
 boto3==1.36.2
 # for pg_activity
