@@ -10,6 +10,10 @@ ipython==8.7.0
 
 ```
 
+### algoliasearch
+
+algoliasearch esta fija en al version 2.6.2. la version 4.12 es incompatible con [enterprise-extensions](https://github.com/ingadhoc/enterprise-extensions/). Se quiere depreciar la funcionalidad.
+
 ## Packages (APT)
 
 ```sh
