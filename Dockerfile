@@ -271,7 +271,7 @@ RUN autoaggregate_pip --config "$RESOURCES/saas-odoo_project_repos.yml" --output
     && mv -f $SOURCES/upgrade-util/src/* $SOURCES/odoo/odoo/upgrade \
     && rm -rf $ODOO_HOME/venv/lib/python*/site-packages/odoo \
     # Skip these files in git tracking
-    && cd $SOURCES/odoo; git update-index --assume-unchanged $(git ls-files $SOURCES/odoo/odoo/upgrade --full-name | tr '\n' ' '); git status >/dev/null; cd - \
+    && echo "odoo/upgrade" >> $SOURCES/odoo/.git/info/exclude \
     # end - upgrade-util install issue
     # Installing Odoo
     && pip install --no-cache-dir -e $SOURCES/odoo
