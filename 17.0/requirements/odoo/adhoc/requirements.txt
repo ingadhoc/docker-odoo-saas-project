@@ -57,3 +57,5 @@ ShopifyApi==12.3.0
 pandas==2.1.2
 # requirement para test tours
 websocket-client==1.8.0
+# json logs #46062 (oca module - logging_json)
+python-json-logger==3.2.1
