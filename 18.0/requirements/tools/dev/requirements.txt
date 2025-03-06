@@ -1,1 +1,3 @@
 pre-commit
+# MPV agentes de IA en odoo (#49259)
+openai==1.65.4
